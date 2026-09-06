@@ -1,0 +1,472 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+if PlayerGui:FindFirstChild("BloxFruitPremiumUI_StartHidden") then
+    PlayerGui.BloxFruitPremiumUI_StartHidden:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BloxFruitPremiumUI_StartHidden"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MINT_NEON = Color3.fromRGB(0, 255, 180)
+local BG_DARK = Color3.fromRGB(15, 18, 22)
+local ELEMENT_BG = Color3.fromRGB(25, 30, 38)
+
+local function addCorner(parent, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius)
+    corner.Parent = parent
+    return corner
+end
+
+local function addGlowBorder(parent, color, thickness, transparency)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or MINT_NEON
+    stroke.Thickness = thickness or 1.5
+    stroke.Transparency = transparency or 0.2
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = parent
+    return stroke
+end
+
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(0, 480, 0, 48)
+TopBar.AnchorPoint = Vector2.new(0.5, 0)
+TopBar.Position = UDim2.new(0.5, 0, 0.05, 0)
+TopBar.BackgroundColor3 = BG_DARK
+TopBar.BorderSizePixel = 0
+TopBar.Active = true
+TopBar.Parent = ScreenGui
+addCorner(TopBar, 24)
+addGlowBorder(TopBar, MINT_NEON, 1.8, 0.1)
+
+local TopTitle = Instance.new("TextLabel")
+TopTitle.Size = UDim2.new(1, -75, 0.5, 0)
+TopTitle.Position = UDim2.new(0, 15, 0.1, 0)
+TopTitle.BackgroundTransparency = 1
+TopTitle.Text = "ARAI HUB"
+TopTitle.TextColor3 = MINT_NEON
+TopTitle.TextSize = 12
+TopTitle.Font = Enum.Font.GothamBold
+TopTitle.Parent = TopBar
+
+local TopTime = Instance.new("TextLabel")
+TopTime.Size = UDim2.new(1, -75, 0.4, 0)
+TopTime.Position = UDim2.new(0, 15, 0.55, 0)
+TopTime.BackgroundTransparency = 1
+TopTime.Text = os.date("%X | %B %d, %Y")
+TopTime.TextColor3 = Color3.fromRGB(200, 210, 220)
+TopTime.TextSize = 11
+TopTime.Font = Enum.Font.Gotham
+TopTime.Parent = TopBar
+
+local TopMenuBtn = Instance.new("TextButton")
+TopMenuBtn.Size = UDim2.new(0, 44, 0, 44)
+TopMenuBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+TopMenuBtn.Position = UDim2.new(1, -24, 0.5, 0)
+TopMenuBtn.BackgroundTransparency = 1
+TopMenuBtn.BorderSizePixel = 0
+TopMenuBtn.Text = "≡"
+TopMenuBtn.TextColor3 = MINT_NEON
+TopMenuBtn.TextSize = 28
+TopMenuBtn.Font = Enum.Font.GothamBold
+TopMenuBtn.AutoButtonColor = false
+TopMenuBtn.Parent = TopBar
+
+local IconGroup = Instance.new("Frame")
+IconGroup.Name = "IconGroup"
+IconGroup.Size = UDim2.new(0, 0, 0, 42)
+IconGroup.AnchorPoint = Vector2.new(0.5, 0)
+IconGroup.Position = UDim2.new(0.5, 0, 0.125, 0)
+IconGroup.BackgroundTransparency = 1
+IconGroup.Visible = false
+IconGroup.Parent = ScreenGui
+
+local IconLayout = Instance.new("UIListLayout")
+IconLayout.FillDirection = Enum.FillDirection.Horizontal
+IconLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+IconLayout.SortOrder = Enum.SortOrder.LayoutOrder
+IconLayout.Padding = UDim.new(0, 6)
+IconLayout.Parent = IconGroup
+
+IconLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    IconGroup.Size = UDim2.new(0, IconLayout.AbsoluteContentSize.X, 0, 42)
+end)
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 480, 0, 0)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0)
+MainFrame.Position = UDim2.new(0.5, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = BG_DARK
+MainFrame.Active = true
+MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
+addCorner(MainFrame, 12)
+addGlowBorder(MainFrame, MINT_NEON, 2, 0.15)
+
+local MainTitle = Instance.new("TextLabel")
+MainTitle.Size = UDim2.new(1, -20, 0, 25)
+MainTitle.Position = UDim2.new(0, 15, 0, 10)
+MainTitle.BackgroundTransparency = 1
+MainTitle.Text = "Main"
+MainTitle.TextColor3 = MINT_NEON
+MainTitle.TextSize = 14
+MainTitle.Font = Enum.Font.GothamBold
+MainTitle.TextXAlignment = Enum.TextXAlignment.Left
+MainTitle.Parent = MainFrame
+
+local Tabs = {}
+local FirstTab = true
+local Library = {}
+
+function Library:AddTab(tabName, iconText)
+    local TabData = {}
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 42, 0, 42)
+    btn.BackgroundColor3 = BG_DARK
+    btn.Text = iconText or "📌"
+    btn.TextColor3 = Color3.fromRGB(0, 150, 255)
+    btn.TextSize = 18
+    btn.Parent = IconGroup
+    addCorner(btn, 12)
+    local stroke = addGlowBorder(btn, Color3.fromRGB(80, 80, 80), 1, 0.5)
+
+    local sf = Instance.new("ScrollingFrame")
+    sf.Name = tabName .. "Content"
+    sf.Size = UDim2.new(1, -20, 1, -45)
+    sf.Position = UDim2.new(0, 10, 0, 38)
+    sf.BackgroundTransparency = 1
+    sf.BorderSizePixel = 0
+    sf.ScrollBarThickness = 3
+    sf.ScrollBarImageColor3 = MINT_NEON
+    sf.Visible = false
+    sf.Parent = MainFrame
+
+    local layout = Instance.new("UIListLayout")
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 8)
+    layout.Parent = sf
+
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        sf.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+    end)
+
+    TabData.Button = btn
+    TabData.Stroke = stroke
+    TabData.Container = sf
+    TabData.Name = tabName
+
+    table.insert(Tabs, TabData)
+
+    btn.MouseButton1Click:Connect(function()
+        for _, t in ipairs(Tabs) do
+            t.Container.Visible = (t == TabData)
+            t.Stroke.Color = (t == TabData) and MINT_NEON or Color3.fromRGB(80, 80, 80)
+            t.Stroke.Thickness = (t == TabData) and 1.5 or 1
+        end
+        MainTitle.Text = tabName
+    end)
+
+    if FirstTab then
+        FirstTab = false
+        sf.Visible = true
+        stroke.Color = MINT_NEON
+        stroke.Thickness = 1.5
+        MainTitle.Text = tabName
+    end
+
+    function TabData:AddUserProfile()
+        local card = Instance.new("Frame")
+        card.Size = UDim2.new(1, 0, 0, 60)
+        card.BackgroundColor3 = ELEMENT_BG
+        card.Parent = sf
+        addCorner(card, 10)
+        addGlowBorder(card, Color3.fromRGB(60, 70, 80), 1, 0.4)
+
+        local avatar = Instance.new("ImageLabel")
+        avatar.Size = UDim2.new(0, 44, 0, 44)
+        avatar.Position = UDim2.new(0, 8, 0.5, -22)
+        avatar.BackgroundColor3 = Color3.fromRGB(15, 18, 22)
+        avatar.BackgroundTransparency = 0
+        avatar.Parent = card
+        addCorner(avatar, 22)
+        addGlowBorder(avatar, MINT_NEON, 1.2, 0.2)
+
+        task.spawn(function()
+            local content, isReady = Players:GetUserThumbnailAsync(
+                LocalPlayer.UserId, 
+                Enum.ThumbnailType.HeadShot, 
+                Enum.ThumbnailSize.Size100x100
+            )
+            if isReady then avatar.Image = content end
+        end)
+
+        local nameLbl = Instance.new("TextLabel")
+        nameLbl.Size = UDim2.new(1, -65, 0, 20)
+        nameLbl.Position = UDim2.new(0, 60, 0, 10)
+        nameLbl.BackgroundTransparency = 1
+        nameLbl.Text = LocalPlayer.DisplayName
+        nameLbl.TextColor3 = MINT_NEON
+        nameLbl.TextSize = 13
+        nameLbl.Font = Enum.Font.GothamBold
+        nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+        nameLbl.Parent = card
+
+        local userLbl = Instance.new("TextLabel")
+        userLbl.Size = UDim2.new(1, -65, 0, 16)
+        userLbl.Position = UDim2.new(0, 60, 0, 30)
+        userLbl.BackgroundTransparency = 1
+        userLbl.Text = "@" .. LocalPlayer.Name .. " | Level: " .. tostring(LocalPlayer.UserId)
+        userLbl.TextColor3 = Color3.fromRGB(160, 175, 190)
+        userLbl.TextSize = 11
+        userLbl.Font = Enum.Font.Gotham
+        userLbl.TextXAlignment = Enum.TextXAlignment.Left
+        userLbl.Parent = card
+
+        return card
+    end
+
+    function TabData:AddSection(sectionTitle)
+        local secLabel = Instance.new("TextLabel")
+        secLabel.Size = UDim2.new(1, 0, 0, 22)
+        secLabel.BackgroundTransparency = 1
+        secLabel.Text = "— " .. sectionTitle .. " —"
+        secLabel.TextColor3 = MINT_NEON
+        secLabel.TextSize = 12
+        secLabel.Font = Enum.Font.GothamBold
+        secLabel.Parent = sf
+    end
+
+    function TabData:AddButton(btnText, callback)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(1, 0, 0, 35)
+        b.BackgroundColor3 = ELEMENT_BG
+        b.Text = btnText
+        b.TextColor3 = Color3.fromRGB(220, 230, 240)
+        b.TextSize = 13
+        b.Font = Enum.Font.GothamMedium
+        b.Parent = sf
+        addCorner(b, 8)
+        addGlowBorder(b, Color3.fromRGB(60, 70, 80), 1, 0.4)
+
+        b.MouseButton1Click:Connect(function()
+            if callback then callback() end
+        end)
+    end
+
+    function TabData:AddToggle(toggleText, default, callback)
+        local state = default or false
+        local tFrame = Instance.new("Frame")
+        tFrame.Size = UDim2.new(1, 0, 0, 35)
+        tFrame.BackgroundColor3 = ELEMENT_BG
+        tFrame.Parent = sf
+        addCorner(tFrame, 8)
+        addGlowBorder(tFrame, Color3.fromRGB(60, 70, 80), 1, 0.4)
+
+        local tLabel = Instance.new("TextLabel")
+        tLabel.Size = UDim2.new(1, -50, 1, 0)
+        tLabel.Position = UDim2.new(0, 12, 0, 0)
+        tLabel.BackgroundTransparency = 1
+        tLabel.Text = toggleText
+        tLabel.TextColor3 = Color3.fromRGB(220, 230, 240)
+        tLabel.TextSize = 13
+        tLabel.Font = Enum.Font.GothamMedium
+        tLabel.TextXAlignment = Enum.TextXAlignment.Left
+        tLabel.Parent = tFrame
+
+        local tBtn = Instance.new("TextButton")
+        tBtn.Size = UDim2.new(0, 40, 0, 20)
+        tBtn.Position = UDim2.new(1, -48, 0.5, -10)
+        tBtn.BackgroundColor3 = state and MINT_NEON or Color3.fromRGB(50, 50, 60)
+        tBtn.Text = ""
+        tBtn.Parent = tFrame
+        addCorner(tBtn, 10)
+
+        tBtn.MouseButton1Click:Connect(function()
+            state = not state
+            tBtn.BackgroundColor3 = state and MINT_NEON or Color3.fromRGB(50, 50, 60)
+            if callback then callback(state) end
+        end)
+    end
+
+    function TabData:AddSlider(sliderText, min, max, default, callback)
+        local Value = default or min
+        local sFrame = Instance.new("Frame")
+        sFrame.Size = UDim2.new(1, 0, 0, 45)
+        sFrame.BackgroundColor3 = ELEMENT_BG
+        sFrame.Parent = sf
+        addCorner(sFrame, 8)
+        addGlowBorder(sFrame, Color3.fromRGB(60, 70, 80), 1, 0.4)
+
+        local sLabel = Instance.new("TextLabel")
+        sLabel.Size = UDim2.new(1, -60, 0, 20)
+        sLabel.Position = UDim2.new(0, 12, 0, 4)
+        sLabel.BackgroundTransparency = 1
+        sLabel.Text = sliderText
+        sLabel.TextColor3 = Color3.fromRGB(220, 230, 240)
+        sLabel.TextSize = 12
+        sLabel.Font = Enum.Font.GothamMedium
+        sLabel.TextXAlignment = Enum.TextXAlignment.Left
+        sLabel.Parent = sFrame
+
+        local valLabel = Instance.new("TextLabel")
+        valLabel.Size = UDim2.new(0, 50, 0, 20)
+        valLabel.Position = UDim2.new(1, -55, 0, 4)
+        valLabel.BackgroundTransparency = 1
+        valLabel.Text = tostring(Value)
+        valLabel.TextColor3 = MINT_NEON
+        valLabel.TextSize = 12
+        valLabel.Font = Enum.Font.GothamBold
+        valLabel.TextXAlignment = Enum.TextXAlignment.Right
+        valLabel.Parent = sFrame
+
+        local barBg = Instance.new("Frame")
+        barBg.Size = UDim2.new(1, -24, 0, 6)
+        barBg.Position = UDim2.new(0, 12, 0, 28)
+        barBg.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+        barBg.Parent = sFrame
+        addCorner(barBg, 3)
+
+        local barFill = Instance.new("Frame")
+        barFill.Size = UDim2.new((Value - min) / (max - min), 0, 1, 0)
+        barFill.BackgroundColor3 = MINT_NEON
+        barFill.Parent = barBg
+        addCorner(barFill, 3)
+
+        local isDragging = false
+        local function updateSlider(input)
+            local pos = math.clamp((input.Position.X - barBg.AbsolutePosition.X) / barBg.AbsoluteSize.X, 0, 1)
+            Value = math.floor(min + ((max - min) * pos))
+            barFill.Size = UDim2.new(pos, 0, 1, 0)
+            valLabel.Text = tostring(Value)
+            if callback then callback(Value) end
+        end
+
+        barBg.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                isDragging = true
+                updateSlider(input)
+            end
+        end)
+
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                isDragging = false
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                updateSlider(input)
+            end
+        end)
+    end
+
+    function TabData:AddTextBox(boxText, placeholder, callback)
+        local tFrame = Instance.new("Frame")
+        tFrame.Size = UDim2.new(1, 0, 0, 35)
+        tFrame.BackgroundColor3 = ELEMENT_BG
+        tFrame.Parent = sf
+        addCorner(tFrame, 8)
+        addGlowBorder(tFrame, Color3.fromRGB(60, 70, 80), 1, 0.4)
+
+        local tLabel = Instance.new("TextLabel")
+        tLabel.Size = UDim2.new(0.5, -12, 1, 0)
+        tLabel.Position = UDim2.new(0, 12, 0, 0)
+        tLabel.BackgroundTransparency = 1
+        tLabel.Text = boxText
+        tLabel.TextColor3 = Color3.fromRGB(220, 230, 240)
+        tLabel.TextSize = 12
+        tLabel.Font = Enum.Font.GothamMedium
+        tLabel.TextXAlignment = Enum.TextXAlignment.Left
+        tLabel.Parent = tFrame
+
+        local box = Instance.new("TextBox")
+        box.Size = UDim2.new(0.45, 0, 0, 22)
+        box.Position = UDim2.new(0.52, 0, 0.5, -11)
+        box.BackgroundColor3 = Color3.fromRGB(15, 18, 22)
+        box.Text = ""
+        box.PlaceholderText = placeholder or "พิมพ์ที่นี่..."
+        box.TextColor3 = MINT_NEON
+        box.PlaceholderColor3 = Color3.fromRGB(100, 110, 120)
+        box.TextSize = 11
+        box.Font = Enum.Font.Gotham
+        box.Parent = tFrame
+        addCorner(box, 6)
+
+        box.FocusLost:Connect(function(enterPressed)
+            if callback then callback(box.Text) end
+        end)
+    end
+
+    return TabData
+end
+
+local dragging, dragInput, dragStart, startPosTopBar, startPosIconGroup, startPosMainFrame
+
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPosTopBar = TopBar.Position
+        startPosIconGroup = IconGroup.Position
+        startPosMainFrame = MainFrame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+
+TopBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        TopBar.Position = UDim2.new(startPosTopBar.X.Scale, startPosTopBar.X.Offset + delta.X, startPosTopBar.Y.Scale, startPosTopBar.Y.Offset + delta.Y)
+        IconGroup.Position = UDim2.new(startPosIconGroup.X.Scale, startPosIconGroup.X.Offset + delta.X, startPosIconGroup.Y.Scale, startPosIconGroup.Y.Offset + delta.Y)
+        MainFrame.Position = UDim2.new(startPosMainFrame.X.Scale, startPosMainFrame.X.Offset + delta.X, startPosMainFrame.Y.Scale, startPosMainFrame.Y.Offset + delta.Y)
+    end
+end)
+
+local isContentVisible = false
+TopMenuBtn.MouseButton1Click:Connect(function()
+    isContentVisible = not isContentVisible
+    local btnAnimInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    
+    if isContentVisible then
+        TweenService:Create(TopMenuBtn, btnAnimInfo, {Size = UDim2.new(0, 44, 0, 44), Rotation = 90, TextTransparency = 0}):Play()
+        IconGroup.Visible = true
+        MainFrame.Visible = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 480, 0, 420)}):Play()
+    else
+        TweenService:Create(TopMenuBtn, btnAnimInfo, {Size = UDim2.new(0, 44, 0, 44), Rotation = 0, TextTransparency = 0.2}):Play()
+        IconGroup.Visible = false
+        local hideTween = TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, 480, 0, 0)})
+        hideTween:Play()
+        hideTween.Completed:Connect(function()
+            if not isContentVisible then MainFrame.Visible = false end
+        end)
+    end
+end)
+
+task.spawn(function()
+    while true do
+        TopTime.Text = os.date("%X | %B %d, %Y")
+        task.wait(1)
+    end
+end)
+
+return Library
