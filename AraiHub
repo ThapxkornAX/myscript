@@ -1,6 +1,6 @@
 local GameScripts = {
     [128736949265057] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/gakuran", 
-    [2753915549] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/bloxfruit",
+    [2753915549, 4442272183, 7449423635] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/bloxfruit",
 }
 local currentId = GameScripts[game.GameId] and game.GameId or game.PlaceId
 local scriptUrl = GameScripts[currentId]
