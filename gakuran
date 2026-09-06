@@ -1,0 +1,471 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/myguikub"))()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ฟังก์ชันดึงค่าจาก Value / Attributes
+local function getValue(parent, name)
+    if not parent then return "N/A" end
+    local child = parent:FindFirstChild(name)
+    if child and (child:IsA("ValueBase") or child:IsA("StringValue") or child:IsA("IntValue") or child:IsA("NumberValue")) then
+        return tostring(child.Value)
+    elseif parent:GetAttribute(name) ~= nil then
+        return tostring(parent:GetAttribute(name))
+    end
+    return "N/A"
+end
+
+-- ==========================================
+-- TAB 1: MAIN
+-- ==========================================
+local MainTab = Library:AddTab("Main", "👤")
+
+MainTab:AddUserProfile()
+
+local myFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild(LocalPlayer.Name)
+local myData = myFolder and myFolder:FindFirstChild("PlayerData")
+
+local firstName = getValue(myData, "FirstName")
+local lastName = getValue(myData, "LastName")
+local gender = getValue(myData, "Gender")
+local age = getValue(myData, "Age")
+local birthday = getValue(myData, "Birthday")
+local ethnicity = getValue(myData, "Ethnicity")
+local height = getValue(myData, "Height")
+if height == "N/A" then height = getValue(myData, "CurrentHeight") end
+
+local combatStyle = getValue(myData, "CombatStyle")
+local combatSlot1 = getValue(myData, "CombatStyleSlot1")
+local combatSlot2 = getValue(myData, "CombatStyleSlot2")
+
+MainTab:AddSection("My Character Info")
+MainTab:AddButton("Name: " .. firstName .. " " .. lastName, function() end)
+MainTab:AddButton("Gender / Age: " .. gender .. " | Age: " .. age, function() end)
+MainTab:AddButton("Birthday: " .. birthday, function() end)
+MainTab:AddButton("Ethnicity: " .. ethnicity, function() end)
+MainTab:AddButton("Height: " .. height, function() end)
+
+MainTab:AddSection("Combat Styles")
+MainTab:AddButton("Equipped Combat: " .. combatStyle, function() end)
+MainTab:AddButton("Combat Slot 1: " .. combatSlot1, function() end)
+MainTab:AddButton("Combat Slot 2: " .. combatSlot2, function() end)
+
+-- ==========================================
+-- TAB 2: SERVER PLAYERS
+-- ==========================================
+local ServerTab = Library:AddTab("Server", "🌐")
+
+local container = ServerTab.Container or ServerTab.Holder or ServerTab
+if not container:FindFirstChildOfClass("UIListLayout") then
+    local layout = Instance.new("UIListLayout")
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 10)
+    layout.Parent = container
+end
+
+local playerCards = {}
+
+local function createCard(plr)
+    local card = Instance.new("Frame")
+    card.Name = plr.Name
+    card.Size = UDim2.new(1, -10, 0, 115)
+    card.BackgroundColor3 = Color3.fromRGB(20, 24, 30)
+    card.BorderSizePixel = 0
+    card.Parent = container
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = card
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(50, 65, 80)
+    stroke.Thickness = 1.2
+    stroke.Parent = card
+
+    local avatar = Instance.new("ImageLabel")
+    avatar.Size = UDim2.new(0, 50, 0, 50)
+    avatar.Position = UDim2.new(0, 10, 0, 10)
+    avatar.BackgroundColor3 = Color3.fromRGB(10, 12, 15)
+    avatar.BorderSizePixel = 0
+    avatar.Parent = card
+
+    local avCorner = Instance.new("UICorner")
+    avCorner.CornerRadius = UDim.new(0, 25)
+    avCorner.Parent = avatar
+
+    task.spawn(function()
+        local content, isReady = Players:GetUserThumbnailAsync(
+            plr.UserId, 
+            Enum.ThumbnailType.HeadShot, 
+            Enum.ThumbnailSize.Size100x100
+        )
+        if isReady then avatar.Image = content end
+    end)
+
+    local headerText = Instance.new("TextLabel")
+    headerText.Size = UDim2.new(1, -70, 0, 22)
+    headerText.Position = UDim2.new(0, 68, 0, 8)
+    headerText.BackgroundTransparency = 1
+    headerText.Text = plr.DisplayName .. " (@" .. plr.Name .. ")"
+    headerText.TextColor3 = Color3.fromRGB(0, 255, 170)
+    headerText.TextSize = 15
+    headerText.Font = Enum.Font.GothamBold
+    headerText.TextXAlignment = Enum.TextXAlignment.Left
+    headerText.Parent = card
+
+    local nameText = Instance.new("TextLabel")
+    nameText.Name = "NameLabel"
+    nameText.Size = UDim2.new(1, -70, 0, 20)
+    nameText.Position = UDim2.new(0, 68, 0, 32)
+    nameText.BackgroundTransparency = 1
+    nameText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameText.TextSize = 14
+    nameText.Font = Enum.Font.GothamBold
+    nameText.TextXAlignment = Enum.TextXAlignment.Left
+    nameText.Parent = card
+
+    local statsText = Instance.new("TextLabel")
+    statsText.Name = "StatsLabel"
+    statsText.Size = UDim2.new(1, -20, 0, 20)
+    statsText.Position = UDim2.new(0, 10, 0, 62)
+    statsText.BackgroundTransparency = 1
+    statsText.TextColor3 = Color3.fromRGB(200, 215, 230)
+    statsText.TextSize = 13
+    statsText.Font = Enum.Font.GothamMedium
+    statsText.TextXAlignment = Enum.TextXAlignment.Left
+    statsText.Parent = card
+
+    local combatText = Instance.new("TextLabel")
+    combatText.Name = "CombatLabel"
+    combatText.Size = UDim2.new(1, -20, 0, 20)
+    combatText.Position = UDim2.new(0, 10, 0, 86)
+    combatText.BackgroundTransparency = 1
+    combatText.TextColor3 = Color3.fromRGB(200, 215, 230)
+    combatText.TextSize = 13
+    combatText.Font = Enum.Font.GothamMedium
+    combatText.TextXAlignment = Enum.TextXAlignment.Left
+    combatText.Parent = card
+
+    playerCards[plr.Name] = card
+    return card
+end
+
+local function updateCardData(plr)
+    local card = playerCards[plr.Name] or createCard(plr)
+    
+    local targetFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild(plr.Name)
+    local targetData = targetFolder and targetFolder:FindFirstChild("PlayerData")
+
+    if targetData then
+        local pFirstName = getValue(targetData, "FirstName")
+        local pLastName = getValue(targetData, "LastName")
+        local fullName = (pFirstName ~= "N/A" or pLastName ~= "N/A") and (pFirstName .. " " .. pLastName) or "N/A"
+        
+        local pGender = getValue(targetData, "Gender")
+        local pAge = getValue(targetData, "Age")
+        local pEth = getValue(targetData, "Ethnicity")
+        local pCombat = getValue(targetData, "CombatStyle")
+        local pHeight = getValue(targetData, "Height")
+        if pHeight == "N/A" then pHeight = getValue(targetData, "CurrentHeight") end
+
+        card.NameLabel.Text = "RP Name: " .. fullName
+        card.StatsLabel.Text = "Gender: " .. pGender .. " | Age: " .. pAge .. " | Eth: " .. pEth .. " | H: " .. pHeight
+        card.CombatLabel.Text = "Combat: " .. pCombat
+    else
+        card.NameLabel.Text = "RP Name: Loading..."
+        card.StatsLabel.Text = "Fetching PlayerData..."
+        card.CombatLabel.Text = "Combat: N/A"
+    end
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        local currentPlayers = {}
+        for _, plr in ipairs(Players:GetPlayers()) do
+            currentPlayers[plr.Name] = true
+            updateCardData(plr)
+        end
+
+        for name, card in pairs(playerCards) do
+            if not currentPlayers[name] then
+                card:Destroy()
+                playerCards[name] = nil
+            end
+        end
+    end
+end)
+
+-- ==========================================
+-- TAB 3: MISC
+-- ==========================================
+local MiscTab = Library:AddTab("Misc", "⚙️")
+
+MiscTab:AddSection("Player Modifications")
+
+local speedMultiplier = 1
+local customJumpHeight = 50
+local isNoclipActive = false
+
+-- ระบบ CFrame Speed Hack & NoClip Loop
+RunService.Stepped:Connect(function()
+    local char = LocalPlayer.Character
+    if isNoclipActive and char then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function(deltaTime)
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if hrp and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+        if speedMultiplier > 1 then
+            local moveVector = humanoid.MoveDirection * ((speedMultiplier * 10) * deltaTime)
+            hrp.CFrame = hrp.CFrame + moveVector
+        end
+    end
+
+    if humanoid then
+        if customJumpHeight > 50 then
+            humanoid.UseJumpPower = true
+            humanoid.JumpPower = customJumpHeight
+            humanoid.JumpHeight = customJumpHeight / 3
+        end
+    end
+end)
+
+MiscTab:AddToggle("Enable NoClip", false, function(Value)
+    isNoclipActive = Value
+end)
+
+MiscTab:AddSlider("WalkSpeed", 16, 250, 16, function(Value)
+    speedMultiplier = Value / 16
+end)
+
+MiscTab:AddSlider("JumpPower", 50, 300, 50, function(Value)
+    customJumpHeight = Value
+end)
+
+-- ==========================================
+-- FLY SYSTEM
+-- ==========================================
+MiscTab:AddSection("Fly System (Press N)")
+
+_G.FlySpeed = 0.5
+local flying = false
+
+local function toggleFly()
+    flying = not flying
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end
+end
+
+MiscTab:AddToggle("Enable Fly", false, function(Value)
+    flying = Value
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end
+end)
+
+MiscTab:AddSlider("Fly Speed", 1, 10, 1, function(Value)
+    _G.FlySpeed = Value / 2
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.N then
+        toggleFly()
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if not flying or not hrp or not char then return end
+    
+    local camera = workspace.CurrentCamera
+    local moveDir = Vector3.zero
+    
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+    
+    if moveDir.Magnitude > 0 then
+        local currentSpeed = _G.FlySpeed or 1.5
+        local newCFrame = hrp.CFrame + (moveDir.Unit * currentSpeed)
+        hrp.CFrame = newCFrame
+    end
+    
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+end)
+
+-- ==========================================
+-- HELPER SEARCH DROPDOWN
+-- ==========================================
+local function getPlayerList()
+    local list = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            table.insert(list, plr.Name)
+        end
+    end
+    if #list == 0 then table.insert(list, "No Players") end
+    return list
+end
+
+local function addSearchableDropdown(tab, title, callback)
+    local selected = "Select Player..."
+    local options = getPlayerList()
+
+    tab:AddSection(title)
+
+    local boxText = ""
+    tab:AddTextBox("🔍 Search " .. title, "พิมพ์ชื่อเพื่อกรอง...", function(txt)
+        boxText = txt
+    end)
+
+    local dropdown = tab:AddDropdown(title, options, function(opt)
+        selected = opt
+        if callback then callback(selected) end
+    end)
+
+    task.spawn(function()
+        local lastSearch = ""
+        while task.wait(0.5) do
+            if lastSearch ~= boxText then
+                lastSearch = boxText
+                local filtered = {}
+                local fullList = getPlayerList()
+                
+                if boxText == "" then
+                    filtered = fullList
+                else
+                    for _, name in ipairs(fullList) do
+                        if string.find(name:lower(), boxText:lower()) then
+                            table.insert(filtered, name)
+                        end
+                    end
+                    if #filtered == 0 then table.insert(filtered, "No Results") end
+                end
+
+                if dropdown and typeof(dropdown.Refresh) == "function" then
+                    dropdown:Refresh(filtered, true)
+                end
+            end
+        end
+    end)
+
+    return function() return selected end
+end
+
+-- ==========================================
+-- FLY BEHIND
+-- ==========================================
+local isFlyBehindActive = false
+local flyBehindDistance = 3.5
+
+local getFlyBehindTarget = addSearchableDropdown(MiscTab, "Fly Behind Target", function(target) end)
+
+MiscTab:AddToggle("Enable Fly Behind", false, function(Value)
+    isFlyBehindActive = Value
+end)
+
+MiscTab:AddSlider("Behind Distance", 1, 20, 3.5, function(Value)
+    flyBehindDistance = Value
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not isFlyBehindActive then return end
+    local targetName = getFlyBehindTarget()
+    if not targetName or targetName == "" or targetName == "No Players" or targetName == "No Results" or targetName == "Select Player..." then return end
+
+    local targetPlr = Players:FindFirstChild(targetName)
+    local targetChar = targetPlr and targetPlr.Character
+    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    
+    local myChar = LocalPlayer.Character
+    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    
+    if targetHrp and myHrp then
+        myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 1.5, flyBehindDistance)
+        myHrp.AssemblyLinearVelocity = Vector3.zero
+        myHrp.AssemblyAngularVelocity = Vector3.zero
+    end
+end)
+
+-- ==========================================
+-- FLY ATTACHED
+-- ==========================================
+local isFlyAttachedActive = false
+local attachOffset = CFrame.new(0, 0, 0)
+
+local getFlyAttachTarget = addSearchableDropdown(MiscTab, "Fly Attached Target", function(target) end)
+
+MiscTab:AddDropdown("Attach Position", {"Center", "Right", "Left", "Front", "Top"}, function(Option)
+    if Option == "Center" then attachOffset = CFrame.new(0, 0, 0)
+    elseif Option == "Right" then attachOffset = CFrame.new(2.5, 0, 0)
+    elseif Option == "Left" then attachOffset = CFrame.new(-2.5, 0, 0)
+    elseif Option == "Front" then attachOffset = CFrame.new(0, 0, -2.5)
+    elseif Option == "Top" then attachOffset = CFrame.new(0, 3.5, 0)
+    end
+end)
+
+MiscTab:AddToggle("Enable Fly Attached", false, function(Value)
+    isFlyAttachedActive = Value
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not isFlyAttachedActive then return end
+    local targetName = getFlyAttachTarget()
+    if not targetName or targetName == "" or targetName == "No Players" or targetName == "No Results" or targetName == "Select Player..." then return end
+
+    local targetPlr = Players:FindFirstChild(targetName)
+    local targetChar = targetPlr and targetPlr.Character
+    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    
+    local myChar = LocalPlayer.Character
+    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    
+    if targetHrp and myHrp then
+        myHrp.CFrame = targetHrp.CFrame * attachOffset
+        myHrp.AssemblyLinearVelocity = Vector3.zero
+        myHrp.AssemblyAngularVelocity = Vector3.zero
+    end
+end)
+
+-- ==========================================
+-- TELEPORT TO PLAYER
+-- ==========================================
+local getTeleportTarget = addSearchableDropdown(MiscTab, "Teleport Target", function(target) end)
+
+MiscTab:AddButton("Teleport to Selected Player", function()
+    local targetName = getTeleportTarget()
+    if targetName and targetName ~= "" and targetName ~= "No Players" and targetName ~= "No Results" and targetName ~= "Select Player..." then
+        local targetPlr = Players:FindFirstChild(targetName)
+        if targetPlr and targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") then
+            local myChar = LocalPlayer.Character
+            if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+                myChar.HumanoidRootPart.CFrame = targetPlr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+            end
+        end
+    end
+end)
