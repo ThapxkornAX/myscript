@@ -1,1 +1,1 @@
-
+game:GetService("Players").LocalPlayer:Kick("กูยังไม่ทำไอ้โง่")
