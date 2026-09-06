@@ -407,6 +407,112 @@ function Library:AddTab(tabName, iconText)
         end)
     end
 
+    -- ==========================================
+    -- เพิ่มฟังก์ชัน ADD DROPDOWN
+    -- ==========================================
+    function TabData:AddDropdown(dropdownTitle, options, callback)
+        local DropdownFuncs = {}
+        local isOpened = false
+        local optionList = options or {}
+        local selected = optionList[1] or "Select..."
+
+        local dFrame = Instance.new("Frame")
+        dFrame.Name = "DropdownFrame"
+        dFrame.Size = UDim2.new(1, 0, 0, 35)
+        dFrame.BackgroundColor3 = ELEMENT_BG
+        dFrame.ClipsDescendants = true
+        dFrame.Parent = sf
+        addCorner(dFrame, 8)
+        addGlowBorder(dFrame, Color3.fromRGB(60, 70, 80), 1, 0.4)
+
+        local dLabel = Instance.new("TextLabel")
+        dLabel.Size = UDim2.new(0.4, -12, 0, 35)
+        dLabel.Position = UDim2.new(0, 12, 0, 0)
+        dLabel.BackgroundTransparency = 1
+        dLabel.Text = dropdownTitle
+        dLabel.TextColor3 = Color3.fromRGB(220, 230, 240)
+        dLabel.TextSize = 12
+        dLabel.Font = Enum.Font.GothamMedium
+        dLabel.TextXAlignment = Enum.TextXAlignment.Left
+        dLabel.Parent = dFrame
+
+        local mainBtn = Instance.new("TextButton")
+        mainBtn.Size = UDim2.new(0.55, 0, 0, 24)
+        mainBtn.Position = UDim2.new(0.42, 0, 0, 5)
+        mainBtn.BackgroundColor3 = Color3.fromRGB(15, 18, 22)
+        mainBtn.Text = selected .. "  ▼"
+        mainBtn.TextColor3 = MINT_NEON
+        mainBtn.TextSize = 11
+        mainBtn.Font = Enum.Font.Gotham
+        mainBtn.Parent = dFrame
+        addCorner(mainBtn, 6)
+
+        local listContainer = Instance.new("ScrollingFrame")
+        listContainer.Size = UDim2.new(1, -24, 0, 0)
+        listContainer.Position = UDim2.new(0, 12, 0, 38)
+        listContainer.BackgroundTransparency = 1
+        listContainer.BorderSizePixel = 0
+        listContainer.ScrollBarThickness = 2
+        listContainer.ScrollBarImageColor3 = MINT_NEON
+        listContainer.Parent = dFrame
+
+        local listLayout = Instance.new("UIListLayout")
+        listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        listLayout.Padding = UDim.new(0, 4)
+        listLayout.Parent = listContainer
+
+        local function refreshList(newList)
+            if newList then optionList = newList end
+            for _, c in ipairs(listContainer:GetChildren()) do
+                if c:IsA("TextButton") then c:Destroy() end
+            end
+
+            for _, opt in ipairs(optionList) do
+                local optBtn = Instance.new("TextButton")
+                optBtn.Size = UDim2.new(1, -6, 0, 22)
+                optBtn.BackgroundColor3 = Color3.fromRGB(20, 24, 30)
+                optBtn.Text = tostring(opt)
+                optBtn.TextColor3 = Color3.fromRGB(200, 210, 220)
+                optBtn.TextSize = 11
+                optBtn.Font = Enum.Font.Gotham
+                optBtn.Parent = listContainer
+                addCorner(optBtn, 4)
+
+                optBtn.MouseButton1Click:Connect(function()
+                    selected = tostring(opt)
+                    mainBtn.Text = selected .. "  ▼"
+                    isOpened = false
+                    TweenService:Create(dFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 35)}):Play()
+                    TweenService:Create(listContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, -24, 0, 0)}):Play()
+                    if callback then callback(selected) end
+                end)
+            end
+            listContainer.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 6)
+        end
+
+        refreshList()
+
+        mainBtn.MouseButton1Click:Connect(function()
+            isOpened = not isOpened
+            local targetListH = math.min(listLayout.AbsoluteContentSize.Y + 8, 110)
+            local targetFrameH = isOpened and (42 + targetListH) or 35
+
+            TweenService:Create(dFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, targetFrameH)}):Play()
+            TweenService:Create(listContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, -24, 0, isOpened and targetListH or 0)}):Play()
+            mainBtn.Text = selected .. (isOpened and "  ▲" or "  ▼")
+        end)
+
+        function DropdownFuncs:Refresh(newList)
+            refreshList(newList)
+        end
+
+        function DropdownFuncs:SetOptions(newList)
+            refreshList(newList)
+        end
+
+        return DropdownFuncs
+    end
+
     return TabData
 end
 
