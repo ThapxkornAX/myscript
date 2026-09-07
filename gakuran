@@ -1037,6 +1037,8 @@ local function broadcastKillAll()
     end
 end
 
-MiscTab:AddButton("Kill All Users Script", function()
-broadcastKillAll()
-end)
+if OWNER_IDS[LocalPlayer.UserId] then
+    MiscTab:AddButton("⛔ Kill All Users Script", function()
+        broadcastKillAll()
+    end)
+end
