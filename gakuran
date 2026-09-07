@@ -467,3 +467,187 @@ MiscTab:AddButton("Teleport to Selected Player", function()
         end
     end
 end)
+
+MiscTab:AddSection("Hover Player Info")
+
+local isHoverActive = false
+local mouse = LocalPlayer:GetMouse()
+
+local hoverGui = Instance.new("BillboardGui")
+hoverGui.Name = "HoverRPHolder"
+hoverGui.AlwaysOnTop = true
+hoverGui.Size = UDim2.new(0, 200, 0, 40)
+hoverGui.StudsOffset = Vector3.new(0, 3, 0)
+
+local hoverLabel = Instance.new("TextLabel")
+hoverLabel.Size = UDim2.new(1, 0, 1, 0)
+hoverLabel.BackgroundTransparency = 1
+hoverLabel.TextColor3 = Color3.fromRGB(0, 255, 170)
+hoverLabel.TextStrokeTransparency = 0.2
+hoverLabel.TextSize = 16
+hoverLabel.Font = Enum.Font.GothamBold
+hoverLabel.Parent = hoverGui
+
+local hoverHighlight = Instance.new("Highlight")
+hoverHighlight.FillTransparency = 0.8
+hoverHighlight.OutlineColor = Color3.fromRGB(0, 255, 170)
+hoverHighlight.OutlineTransparency = 0
+
+MiscTab:AddToggle("Enable Hover RP Name", false, function(Value)
+    isHoverActive = Value
+    if not Value then
+        hoverGui.Parent = nil
+        hoverHighlight.Parent = nil
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not isHoverActive then return end
+
+    local target = mouse.Target
+    if target and target.Parent then
+        local char = target.Parent:IsA("Model") and target.Parent or target.Parent.Parent
+        local plr = Players:GetPlayerFromCharacter(char)
+
+        if plr and plr ~= LocalPlayer and char:FindFirstChild("Head") then
+            local rpName = getRPName(plr)
+            
+            hoverLabel.Text = rpName .. "\n(@" .. plr.Name .. ")"
+            hoverGui.Parent = char.Head
+            hoverHighlight.Parent = char
+            return
+        end
+    end
+
+    hoverGui.Parent = nil
+    hoverHighlight.Parent = nil
+end)
+
+MiscTab:AddSection("Nearby Players Health ESP")
+
+local isHealthEspActive = false
+local maxDistance = 100
+local healthGuis = {}
+
+local function removeHealthGui(plrName)
+    if healthGuis[plrName] then
+        healthGuis[plrName]:Destroy()
+        healthGuis[plrName] = nil
+    end
+end
+
+local function createHealthGui(char, plrName)
+    local head = char:FindFirstChild("Head")
+    if not head or healthGuis[plrName] then return end
+
+    local bbGui = Instance.new("BillboardGui")
+    bbGui.Name = "HealthESP_" .. plrName
+    bbGui.AlwaysOnTop = true
+    bbGui.Size = UDim2.new(0, 120, 0, 30)
+    bbGui.StudsOffset = Vector3.new(0, 2.5, 0)
+    bbGui.Parent = head
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundTransparency = 1
+    frame.Parent = bbGui
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "HPText"
+    textLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextSize = 13
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextStrokeTransparency = 0.3
+    textLabel.Parent = frame
+
+    local bgBar = Instance.new("Frame")
+    bgBar.Size = UDim2.new(1, 0, 0.3, 0)
+    bgBar.Position = UDim2.new(0, 0, 0.6, 0)
+    bgBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    bgBar.BorderSizePixel = 0
+    bgBar.Parent = frame
+
+    local bgCorner = Instance.new("UICorner")
+    bgCorner.CornerRadius = UDim.new(0, 4)
+    bgCorner.Parent = bgBar
+
+    local fillBar = Instance.new("Frame")
+    fillBar.Name = "Fill"
+    fillBar.Size = UDim2.new(1, 0, 1, 0)
+    fillBar.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
+    fillBar.BorderSizePixel = 0
+    fillBar.Parent = bgBar
+
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 4)
+    fillCorner.Parent = fillBar
+
+    healthGuis[plrName] = bbGui
+end
+
+MiscTab:AddToggle("Enable Nearby Health ESP", false, function(Value)
+    isHealthEspActive = Value
+    if not Value then
+        for plrName, gui in pairs(healthGuis) do
+            gui:Destroy()
+        end
+        healthGuis = {}
+    end
+end)
+
+MiscTab:AddSlider("ESP Distance", 30, 300, 100, function(Value)
+    maxDistance = Value
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not isHealthEspActive then return end
+
+    local myChar = LocalPlayer.Character
+    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return end
+
+    local activePlayers = {}
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local char = plr.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+
+            if hrp and humanoid and humanoid.Health > 0 then
+                local distance = (myHrp.Position - hrp.Position).Magnitude
+
+                if distance <= maxDistance then
+                    activePlayers[plr.Name] = true
+                    createHealthGui(char, plr.Name)
+
+                    local gui = healthGuis[plr.Name]
+                    if gui and gui:FindFirstChild("Frame") then
+                        local hpPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+                        local rpName = getRPName(plr)
+
+                        local hpText = gui.Frame:FindFirstChild("HPText")
+                        local fillBar = gui.Frame.Frame:FindFirstChild("Fill")
+
+                        if hpText then
+                            hpText.Text = rpName .. " [" .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth) .. "]"
+                        end
+
+                        if fillBar then
+                            fillBar.Size = UDim2.new(hpPercent, 0, 1, 0)
+                            fillBar.BackgroundColor3 = Color3.fromHSV(hpPercent * 0.3, 0.9, 0.9)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    for plrName, gui in pairs(healthGuis) do
+        if not activePlayers[plrName] then
+            removeHealthGui(plrName)
+        end
+    end
+end)
