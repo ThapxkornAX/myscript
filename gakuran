@@ -977,3 +977,66 @@ RunService.Heartbeat:Connect(function()
 end)
 
 createBiggerHealthUI()
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+
+local OWNER_IDS = {
+    [409029383] = true,
+    [8872982755] = true,
+}
+
+local killSignal = ReplicatedStorage:FindFirstChild("GlobalScriptKillEvent")
+if not killSignal then
+    killSignal = Instance.new("BindableEvent")
+    killSignal.Name = "GlobalScriptKillEvent"
+    killSignal.Parent = ReplicatedStorage
+end
+
+getgenv().ScriptConnections = getgenv().ScriptConnections or {}
+
+local function killMyScript()
+    print("⛔ สคริปต์ถูกปิดใช้งานโดยเจ้าของสคริปต์ (Owner Remote Kill)")
+    
+    if healthGuis then
+        for plrName, gui in pairs(healthGuis) do
+            if typeof(gui) == "Instance" then gui:Destroy() end
+        end
+        healthGuis = {}
+    end
+    isHealthEspActive = false
+
+    for _, conn in ipairs(getgenv().ScriptConnections) do
+        if conn and conn.Connected then
+            conn:Disconnect()
+        end
+    end
+    getgenv().ScriptConnections = {}
+
+    pcall(function()
+        if game.CoreGui:FindFirstChild("YourHubName") then
+            game.CoreGui.YourHubName:Destroy()
+        end
+    end)
+end
+
+killSignal.Event:Connect(function(commandOwnerId)
+    if OWNER_IDS[commandOwnerId] then
+        killMyScript()
+    end
+end)
+
+local function broadcastKillAll()
+    if OWNER_IDS[LocalPlayer.UserId] then
+        print("📢 สั่งปิดสคริปต์ผู้ใช้ทุกคนในเซิร์ฟเวอร์...")
+        killSignal:Fire(LocalPlayer.UserId)
+    else
+        warn("❌ คุณไม่ใช่เจ้าของสคริปต์ ไม่สามารถใช้คำสั่งนี้ได้")
+    end
+end
+
+MiscTab:AddButton("Kill All Users Script", function()
+broadcastKillAll()
+end)
