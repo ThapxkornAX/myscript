@@ -979,7 +979,6 @@ end)
 createBiggerHealthUI()
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 
@@ -988,21 +987,18 @@ local OWNER_IDS = {
     [8872982755] = true,
 }
 
-local killSignal = ReplicatedStorage:FindFirstChild("GlobalScriptKillEvent")
-if not killSignal then
-    killSignal = Instance.new("BindableEvent")
-    killSignal.Name = "GlobalScriptKillEvent"
-    killSignal.Parent = ReplicatedStorage
-end
+local KILL_COMMAND_SECRET = "___ADMIN_KILL_ALL_HUB_EVENT_8899___"
 
 getgenv().ScriptConnections = getgenv().ScriptConnections or {}
 
-local function killMyScript()
-    print("⛔ สคริปต์ถูกปิดใช้งานโดยเจ้าของสคริปต์ (Owner Remote Kill)")
-    
+local function executeKillSwitch()
+    print("⛔ สคริปต์ถูกปิดใช้งานโดย Owner Kill Switch")
+
     if healthGuis then
         for plrName, gui in pairs(healthGuis) do
-            if typeof(gui) == "Instance" then gui:Destroy() end
+            if typeof(gui) == "Instance" then 
+                gui:Destroy() 
+            end
         end
         healthGuis = {}
     end
@@ -1016,24 +1012,46 @@ local function killMyScript()
     getgenv().ScriptConnections = {}
 
     pcall(function()
-        if game.CoreGui:FindFirstChild("YourHubName") then
-            game.CoreGui.YourHubName:Destroy()
+        if game.CoreGui:FindFirstChild("HealthDisplayUI") then
+            game.CoreGui.HealthDisplayUI:Destroy()
         end
     end)
 end
 
-killSignal.Event:Connect(function(commandOwnerId)
-    if OWNER_IDS[commandOwnerId] then
-        killMyScript()
-    end
-end)
+
+local function listenToOwnerCommands(player)
+    player.Chatted:Connect(function(msg)
+        if OWNER_IDS[player.UserId] and msg == KILL_COMMAND_SECRET then
+            executeKillSwitch()
+        end
+    end)
+end
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    listenToOwnerCommands(plr)
+end
+Players.PlayerAdded:Connect(listenToOwnerCommands)
 
 local function broadcastKillAll()
     if OWNER_IDS[LocalPlayer.UserId] then
-        print("📢 สั่งปิดสคริปต์ผู้ใช้ทุกคนในเซิร์ฟเวอร์...")
-        killSignal:Fire(LocalPlayer.UserId)
+        print("📢 สั่งยิงสัญญาณ Kill All ไปยังเครื่องผู้ใช้ทุกคน...")
+        
+        local TextChatService = game:GetService("TextChatService")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+            local generalChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+            if generalChannel then
+                generalChannel:SendAsync(KILL_COMMAND_SECRET)
+            end
+        else
+            local defaultChat = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+            if defaultChat and defaultChat:FindFirstChild("SayMessageRequest") then
+                defaultChat.SayMessageRequest:FireServer(KILL_COMMAND_SECRET, "All")
+            end
+        end
     else
-        warn("❌ คุณไม่ใช่เจ้าของสคริปต์ ไม่สามารถใช้คำสั่งนี้ได้")
+        warn("❌ คุณไม่ใช่เจ้าของสคริปต์")
     end
 end
 
