@@ -476,18 +476,56 @@ local mouse = LocalPlayer:GetMouse()
 local hoverGui = Instance.new("BillboardGui")
 hoverGui.Name = "HoverRPHolder"
 hoverGui.AlwaysOnTop = true
-hoverGui.Size = UDim2.new(0, 200, 0, 40)
-hoverGui.StudsOffset = Vector3.new(0, 3, 0)
+hoverGui.Size = UDim2.new(0, 200, 0, 80)
+hoverGui.StudsOffset = Vector3.new(0, 3.8, 0)
 
+local container = Instance.new("Frame")
+container.Size = UDim2.new(1, 0, 1, 0)
+container.BackgroundTransparency = 1
+container.Parent = hoverGui
+
+local imageHolder = Instance.new("Frame")
+imageHolder.Name = "ImageHolder"
+imageHolder.Size = UDim2.new(0, 42, 0, 42)
+imageHolder.Position = UDim2.new(0.5, -21, 0, 0)
+imageHolder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+imageHolder.BorderSizePixel = 0
+imageHolder.Parent = container
+
+local holderCorner = Instance.new("UICorner")
+holderCorner.CornerRadius = UDim.new(1, 0)
+holderCorner.Parent = imageHolder
+
+local holderStroke = Instance.new("UIStroke")
+holderStroke.Color = Color3.fromRGB(0, 255, 170)
+holderStroke.Thickness = 2
+holderStroke.Parent = imageHolder
+
+local profileImage = Instance.new("ImageLabel")
+profileImage.Name = "ProfileImage"
+profileImage.Size = UDim2.new(1, -4, 1, -4)
+profileImage.Position = UDim2.new(0, 2, 0, 2)
+profileImage.BackgroundTransparency = 1
+profileImage.Parent = imageHolder
+
+local imgCorner = Instance.new("UICorner")
+imgCorner.CornerRadius = UDim.new(1, 0)
+imgCorner.Parent = profileImage
+
+-- 3. TextLabel (ย้ายลงมาอยู่บรรทัดล่างสุด ใต้รูปโปรไฟล์)
 local hoverLabel = Instance.new("TextLabel")
-hoverLabel.Size = UDim2.new(1, 0, 1, 0)
+hoverLabel.Name = "HoverLabel"
+hoverLabel.Size = UDim2.new(1, 0, 0, 32)
+hoverLabel.Position = UDim2.new(0, 0, 0, 46) -- ย้ายลงมาใต้รูป
 hoverLabel.BackgroundTransparency = 1
 hoverLabel.TextColor3 = Color3.fromRGB(0, 255, 170)
 hoverLabel.TextStrokeTransparency = 0.2
-hoverLabel.TextSize = 16
+hoverLabel.TextSize = 13
 hoverLabel.Font = Enum.Font.GothamBold
-hoverLabel.Parent = hoverGui
+hoverLabel.TextYAlignment = Enum.TextYAlignment.Top
+hoverLabel.Parent = container
 
+-- Highlight ตัวละคร
 local hoverHighlight = Instance.new("Highlight")
 hoverHighlight.FillTransparency = 0.8
 hoverHighlight.OutlineColor = Color3.fromRGB(0, 255, 170)
@@ -501,6 +539,11 @@ MiscTab:AddToggle("Enable Hover RP Name", false, function(Value)
     end
 end)
 
+-- ฟังก์ชันดึง URL รูปโปรไฟล์ Roblox
+local function getProfileThumbnail(userId)
+    return "rbxthumb://type=AvatarHeadShot&id=" .. tostring(userId) .. "&w=150&h=150"
+end
+
 RunService.RenderStepped:Connect(function()
     if not isHoverActive then return end
 
@@ -512,7 +555,10 @@ RunService.RenderStepped:Connect(function()
         if plr and plr ~= LocalPlayer and char:FindFirstChild("Head") then
             local rpName = getRPName(plr)
             
+            -- อัปเดตรูปวงกลมบนสุด และข้อความบรรทัดล่าง
+            profileImage.Image = getProfileThumbnail(plr.UserId)
             hoverLabel.Text = rpName .. "\n(@" .. plr.Name .. ")"
+            
             hoverGui.Parent = char.Head
             hoverHighlight.Parent = char
             return
@@ -529,6 +575,16 @@ local isHealthEspActive = false
 local maxDistance = 100
 local healthGuis = {}
 
+local function getRPImage(plr)
+    local imgId = ""
+    
+    if plr and plr.UserId then
+        imgId = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(plr.UserId) .. "&w=150&h=150"
+    end
+    
+    return imgId
+end
+
 local function removeHealthGui(plrName)
     if healthGuis[plrName] then
         healthGuis[plrName]:Destroy()
@@ -536,15 +592,15 @@ local function removeHealthGui(plrName)
     end
 end
 
-local function createHealthGui(char, plrName)
+local function createHealthGui(char, plrName, plr)
     local head = char:FindFirstChild("Head")
     if not head or healthGuis[plrName] then return end
 
     local bbGui = Instance.new("BillboardGui")
     bbGui.Name = "HealthESP_" .. plrName
     bbGui.AlwaysOnTop = true
-    bbGui.Size = UDim2.new(0, 120, 0, 30)
-    bbGui.StudsOffset = Vector3.new(0, 2.5, 0)
+    bbGui.Size = UDim2.new(0, 140, 0, 90)
+    bbGui.StudsOffset = Vector3.new(0, 3.8, 0)
     bbGui.Parent = head
 
     local frame = Instance.new("Frame")
@@ -552,25 +608,56 @@ local function createHealthGui(char, plrName)
     frame.BackgroundTransparency = 1
     frame.Parent = bbGui
 
+    local imgHolder = Instance.new("Frame")
+    imgHolder.Name = "RPImageHolder"
+    imgHolder.Size = UDim2.new(0, 40, 0, 40)
+    imgHolder.Position = UDim2.new(0.5, -20, 0, 0)
+    imgHolder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    imgHolder.BorderSizePixel = 0
+    imgHolder.Parent = frame
+
+    local imgCorner = Instance.new("UICorner")
+    imgCorner.CornerRadius = UDim.new(1, 0)
+    imgCorner.Parent = imgHolder
+
+    local imgStroke = Instance.new("UIStroke")
+    imgStroke.Color = Color3.fromRGB(0, 255, 170)
+    imgStroke.Thickness = 1.5
+    imgStroke.Parent = imgHolder
+
+    local rpImage = Instance.new("ImageLabel")
+    rpImage.Name = "RPImage"
+    rpImage.Size = UDim2.new(1, -4, 1, -4)
+    rpImage.Position = UDim2.new(0, 2, 0, 2)
+    rpImage.BackgroundTransparency = 1
+    rpImage.Image = getRPImage(plr)
+    rpImage.Parent = imgHolder
+
+    local picCorner = Instance.new("UICorner")
+    picCorner.CornerRadius = UDim.new(1, 0)
+    picCorner.Parent = rpImage
+
     local textLabel = Instance.new("TextLabel")
     textLabel.Name = "HPText"
-    textLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    textLabel.Size = UDim2.new(1, 0, 0, 22)
+    textLabel.Position = UDim2.new(0, 0, 0, 43)
     textLabel.BackgroundTransparency = 1
     textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    textLabel.TextSize = 13
+    textLabel.TextSize = 12
     textLabel.Font = Enum.Font.GothamBold
     textLabel.TextStrokeTransparency = 0.3
     textLabel.Parent = frame
 
     local bgBar = Instance.new("Frame")
-    bgBar.Size = UDim2.new(1, 0, 0.3, 0)
-    bgBar.Position = UDim2.new(0, 0, 0.6, 0)
+    bgBar.Name = "BgBar"
+    bgBar.Size = UDim2.new(1, -20, 0, 6)
+    bgBar.Position = UDim2.new(0, 10, 0, 68)
     bgBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     bgBar.BorderSizePixel = 0
     bgBar.Parent = frame
 
     local bgCorner = Instance.new("UICorner")
-    bgCorner.CornerRadius = UDim.new(0, 4)
+    bgCorner.CornerRadius = UDim.new(0, 3)
     bgCorner.Parent = bgBar
 
     local fillBar = Instance.new("Frame")
@@ -581,7 +668,7 @@ local function createHealthGui(char, plrName)
     fillBar.Parent = bgBar
 
     local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, 4)
+    fillCorner.CornerRadius = UDim.new(0, 3)
     fillCorner.Parent = fillBar
 
     healthGuis[plrName] = bbGui
@@ -621,18 +708,18 @@ RunService.RenderStepped:Connect(function()
 
                 if distance <= maxDistance then
                     activePlayers[plr.Name] = true
-                    createHealthGui(char, plr.Name)
+                    createHealthGui(char, plr.Name, plr)
 
                     local gui = healthGuis[plr.Name]
                     if gui and gui:FindFirstChild("Frame") then
                         local hpPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
-                        local rpName = getRPName(plr)
+                        local rpName = getRPName and getRPName(plr) or plr.DisplayName
 
                         local hpText = gui.Frame:FindFirstChild("HPText")
-                        local fillBar = gui.Frame.Frame:FindFirstChild("Fill")
+                        local fillBar = gui.Frame:FindFirstChild("BgBar") and gui.Frame.BgBar:FindFirstChild("Fill")
 
                         if hpText then
-                            hpText.Text = rpName .. " [" .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth) .. "]"
+                            hpText.Text = rpName .. "\n[" .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth) .. "]"
                         end
 
                         if fillBar then
@@ -750,43 +837,102 @@ function playReplicatedAnim()
     end
 end
 
-MiscTab:AddToggle("Enable Stand Mode", false, function(Value)
-    isStandActive = Value
-    local myChar = LocalPlayer.Character
-    local humanoid = myChar and myChar:FindFirstChildOfClass("Humanoid")
+local function createBiggerHealthUI()
+    local coreGui = game:GetService("CoreGui")
     
-    if Value then
-        playReplicatedAnim()
-        if humanoid then humanoid.PlatformStand = true end
-    else
-        if activeTrack then
-            activeTrack:Stop()
-            activeTrack = nil
-        end
-        if humanoid then humanoid.PlatformStand = false end
+    if coreGui:FindFirstChild("HealthDisplayUI") then
+        coreGui.HealthDisplayUI:Destroy()
     end
-end)
 
-RunService.Heartbeat:Connect(function()
-    if not isStandActive then return end
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "HealthDisplayUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = coreGui
 
-    local selectedOption = getStandTarget()
-    local targetPlr = getPlayerFromSelected(selectedOption)
-    
-    local targetChar = targetPlr and targetPlr.Character
-    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-    
-    local myChar = LocalPlayer.Character
-    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-    
-    if targetHrp and myHrp then
-        myHrp.CFrame = targetHrp.CFrame * standOffset
-        myHrp.AssemblyLinearVelocity = Vector3.zero
-        myHrp.AssemblyAngularVelocity = Vector3.zero
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 280, 0, 60)
+    mainFrame.Position = UDim2.new(1, -295, 1, -75)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = screenGui
 
-        if activeTrack and isFreezeMode and activeTrack.Length > 0 then
-            activeTrack.TimePosition = activeTrack.Length * freezeTime
-            activeTrack:AdjustSpeed(0)
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 10)
+    uiCorner.Parent = mainFrame
+
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Color = Color3.fromRGB(60, 60, 60)
+    uiStroke.Thickness = 2
+    uiStroke.Parent = mainFrame
+
+    local hpText = Instance.new("TextLabel")
+    hpText.Name = "HPText"
+    hpText.Size = UDim2.new(1, 0, 0, 24)
+    hpText.Position = UDim2.new(0, 0, 0, 5)
+    hpText.BackgroundTransparency = 1
+    hpText.Text = "HP: 100 / 100"
+    hpText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    hpText.Font = Enum.Font.SourceSansBold
+    hpText.TextSize = 18
+    hpText.Parent = mainFrame
+
+    local barBackground = Instance.new("Frame")
+    barBackground.Name = "BarBackground"
+    barBackground.Size = UDim2.new(0, 250, 0, 18)
+    barBackground.Position = UDim2.new(0, 15, 0, 32)
+    barBackground.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    barBackground.BorderSizePixel = 0
+    barBackground.Parent = mainFrame
+
+    local barBgCorner = Instance.new("UICorner")
+    barBgCorner.CornerRadius = UDim.new(0, 6)
+    barBgCorner.Parent = barBackground
+
+    local barFill = Instance.new("Frame")
+    barFill.Name = "BarFill"
+    barFill.Size = UDim2.new(1, 0, 1, 0)
+    barFill.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    barFill.BorderSizePixel = 0
+    barFill.Parent = barBackground
+
+    local barFillCorner = Instance.new("UICorner")
+    barFillCorner.CornerRadius = UDim.new(0, 6)
+    barFillCorner.Parent = barFill
+
+    local function updateHealth(humanoid)
+        if not humanoid then return end
+        
+        local health = math.clamp(humanoid.Health, 0, humanoid.MaxHealth)
+        local maxHealth = humanoid.MaxHealth
+        local healthPercent = health / maxHealth
+
+        hpText.Text = string.format("HP: %d / %d", math.floor(health), math.floor(maxHealth))
+        barFill.Size = UDim2.new(healthPercent, 0, 1, 0)
+
+        if healthPercent > 0.5 then
+            barFill.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        elseif healthPercent > 0.25 then
+            barFill.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
+        else
+            barFill.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
         end
     end
-end)
+
+    local function setupCharacter(char)
+        local humanoid = char:WaitForChild("Humanoid", 5)
+        if humanoid then
+            updateHealth(humanoid)
+            humanoid.HealthChanged:Connect(function()
+                updateHealth(humanoid)
+            end)
+        end
+    end
+
+    if LocalPlayer.Character then
+        setupCharacter(LocalPlayer.Character)
+    end
+    LocalPlayer.CharacterAdded:Connect(setupCharacter)
+end
+
+createBiggerHealthUI()
