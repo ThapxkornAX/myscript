@@ -651,3 +651,142 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
+MiscTab:AddSection("Stand Mode")
+
+local isStandActive = false
+local standOffset = CFrame.new(2.2, 1.5, 2.5)
+local activeTrack = nil
+local currentAnimId = ""
+local freezeTime = 0.5
+local isFreezeMode = true
+
+local getStandTarget = addSearchableDropdown(MiscTab, "Stand Target", function(target) end)
+
+local function scanGameAnimations()
+    local animList = {}
+    
+    local myChar = LocalPlayer.Character
+    if myChar then
+        for _, desc in ipairs(myChar:GetDescendants()) do
+            if desc:IsA("Animation") and desc.AnimationId ~= "" then
+                animList[desc.Name .. " (" .. desc.Parent.Name .. ")"] = desc.AnimationId
+            end
+        end
+    end
+    
+    for _, desc in ipairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+        if desc:IsA("Animation") and desc.AnimationId ~= "" then
+            animList[desc.Name] = desc.AnimationId
+        end
+    end
+    
+    return animList
+end
+
+local availableAnims = scanGameAnimations()
+local dropdownOptions = {}
+for name, _ in pairs(availableAnims) do table.insert(dropdownOptions, name) end
+if #dropdownOptions == 0 then table.insert(dropdownOptions, "No Anims Found - Click Refresh") end
+
+local animDropdown = MiscTab:AddDropdown("Select Game Anim", dropdownOptions, function(Option)
+    if availableAnims[Option] then
+        currentAnimId = availableAnims[Option]
+        if isStandActive then
+            playReplicatedAnim()
+        end
+    end
+end)
+
+MiscTab:AddButton("🔄 Scan Game Animations", function()
+    availableAnims = scanGameAnimations()
+    local newOptions = {}
+    for name, _ in pairs(availableAnims) do table.insert(newOptions, name) end
+    if animDropdown and typeof(animDropdown.Refresh) == "function" then
+        animDropdown:Refresh(newOptions, true)
+    end
+end)
+
+MiscTab:AddToggle("Lock Freeze Frame (ค้างท่าไว้)", true, function(Value)
+    isFreezeMode = Value
+    if activeTrack then
+        if Value then
+            activeTrack:AdjustSpeed(0)
+        else
+            activeTrack:AdjustSpeed(1)
+        end
+    end
+end)
+
+MiscTab:AddSlider("Pose Frame (เลือกเฟรมท่า)", 0, 100, 50, function(Value)
+    freezeTime = Value / 100
+    if activeTrack and activeTrack.Length > 0 then
+        activeTrack.TimePosition = activeTrack.Length * freezeTime
+    end
+end)
+
+function playReplicatedAnim()
+    local myChar = LocalPlayer.Character
+    local humanoid = myChar and myChar:FindFirstChildOfClass("Humanoid")
+    
+    if humanoid and currentAnimId ~= "" then
+        if activeTrack then activeTrack:Stop() end
+        
+        local anim = Instance.new("Animation")
+        anim.AnimationId = currentAnimId
+        
+        local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
+        activeTrack = animator:LoadAnimation(anim)
+        activeTrack.Priority = Enum.AnimationPriority.Action4
+        activeTrack:Play()
+        
+        if isFreezeMode then
+            task.wait(0.05)
+            if activeTrack.Length > 0 then
+                activeTrack.TimePosition = activeTrack.Length * freezeTime
+            end
+            activeTrack:AdjustSpeed(0)
+        end
+    end
+end
+
+MiscTab:AddToggle("Enable Stand Mode", false, function(Value)
+    isStandActive = Value
+    local myChar = LocalPlayer.Character
+    local humanoid = myChar and myChar:FindFirstChildOfClass("Humanoid")
+    
+    if Value then
+        playReplicatedAnim()
+        if humanoid then humanoid.PlatformStand = true end
+    else
+        if activeTrack then
+            activeTrack:Stop()
+            activeTrack = nil
+        end
+        if humanoid then humanoid.PlatformStand = false end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not isStandActive then return end
+
+    local selectedOption = getStandTarget()
+    local targetPlr = getPlayerFromSelected(selectedOption)
+    
+    local targetChar = targetPlr and targetPlr.Character
+    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    
+    local myChar = LocalPlayer.Character
+    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    
+    if targetHrp and myHrp then
+        myHrp.CFrame = targetHrp.CFrame * standOffset
+        myHrp.AssemblyLinearVelocity = Vector3.zero
+        myHrp.AssemblyAngularVelocity = Vector3.zero
+
+        if activeTrack and isFreezeMode and activeTrack.Length > 0 then
+            activeTrack.TimePosition = activeTrack.Length * freezeTime
+            activeTrack:AdjustSpeed(0)
+        end
+    end
+end)
