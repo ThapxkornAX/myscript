@@ -5,7 +5,6 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
--- ฟังก์ชันดึงค่าจาก Value / Attributes
 local function getValue(parent, name)
     if not parent then return "N/A" end
     local child = parent:FindFirstChild(name)
@@ -17,9 +16,6 @@ local function getValue(parent, name)
     return "N/A"
 end
 
--- ==========================================
--- TAB 1: MAIN
--- ==========================================
 local MainTab = Library:AddTab("Main", "👤")
 
 MainTab:AddUserProfile()
@@ -52,9 +48,6 @@ MainTab:AddButton("Equipped Combat: " .. combatStyle, function() end)
 MainTab:AddButton("Combat Slot 1: " .. combatSlot1, function() end)
 MainTab:AddButton("Combat Slot 2: " .. combatSlot2, function() end)
 
--- ==========================================
--- TAB 2: SERVER PLAYERS
--- ==========================================
 local ServerTab = Library:AddTab("Server", "🌐")
 
 local container = ServerTab.Container or ServerTab.Holder or ServerTab
@@ -197,9 +190,6 @@ task.spawn(function()
     end
 end)
 
--- ==========================================
--- TAB 3: MISC
--- ==========================================
 local MiscTab = Library:AddTab("Misc", "⚙️")
 
 MiscTab:AddSection("Player Modifications")
@@ -208,7 +198,6 @@ local speedMultiplier = 1
 local customJumpHeight = 50
 local isNoclipActive = false
 
--- ระบบ CFrame Speed Hack & NoClip Loop
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     if isNoclipActive and char then
@@ -253,9 +242,6 @@ MiscTab:AddSlider("JumpPower", 50, 300, 50, function(Value)
     customJumpHeight = Value
 end)
 
--- ==========================================
--- FLY SYSTEM
--- ==========================================
 MiscTab:AddSection("Fly System (Press N)")
 
 _G.FlySpeed = 0.5
@@ -318,18 +304,42 @@ RunService.Heartbeat:Connect(function()
     hrp.AssemblyAngularVelocity = Vector3.zero
 end)
 
--- ==========================================
--- HELPER SEARCH DROPDOWN
--- ==========================================
-local function getPlayerList()
-    local list = {}
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            table.insert(list, plr.Name)
+local function getRPName(plr)
+    local targetFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild(plr.Name)
+    local targetData = targetFolder and targetFolder:FindFirstChild("PlayerData")
+    
+    if targetData then
+        local pFirstName = getValue(targetData, "FirstName")
+        local pLastName = getValue(targetData, "LastName")
+        if pFirstName ~= "N/A" or pLastName ~= "N/A" then
+            return pFirstName .. " " .. pLastName
         end
     end
+    return plr.DisplayName
+end
+
+local playerRPMap = {}
+
+local function getPlayerList()
+    local list = {}
+    playerRPMap = {}
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local rpName = getRPName(plr)
+            local displayName = rpName .. " (@" .. plr.Name .. ")"
+            
+            table.insert(list, displayName)
+            playerRPMap[displayName] = plr
+        end
+    end
+    
     if #list == 0 then table.insert(list, "No Players") end
     return list
+end
+
+local function getPlayerFromSelected(selectedText)
+    return playerRPMap[selectedText]
 end
 
 local function addSearchableDropdown(tab, title, callback)
@@ -339,7 +349,7 @@ local function addSearchableDropdown(tab, title, callback)
     tab:AddSection(title)
 
     local boxText = ""
-    tab:AddTextBox("🔍 Search " .. title, "พิมพ์ชื่อเพื่อกรอง...", function(txt)
+    tab:AddTextBox("🔍 Search " .. title, "พิมพ์ชื่อ RP เพื่อกรอง...", function(txt)
         boxText = txt
     end)
 
@@ -359,9 +369,9 @@ local function addSearchableDropdown(tab, title, callback)
                 if boxText == "" then
                     filtered = fullList
                 else
-                    for _, name in ipairs(fullList) do
-                        if string.find(name:lower(), boxText:lower()) then
-                            table.insert(filtered, name)
+                    for _, rpDisplayName in ipairs(fullList) do
+                        if string.find(rpDisplayName:lower(), boxText:lower()) then
+                            table.insert(filtered, rpDisplayName)
                         end
                     end
                     if #filtered == 0 then table.insert(filtered, "No Results") end
@@ -377,9 +387,6 @@ local function addSearchableDropdown(tab, title, callback)
     return function() return selected end
 end
 
--- ==========================================
--- FLY BEHIND
--- ==========================================
 local isFlyBehindActive = false
 local flyBehindDistance = 3.5
 
@@ -395,10 +402,9 @@ end)
 
 RunService.Heartbeat:Connect(function()
     if not isFlyBehindActive then return end
-    local targetName = getFlyBehindTarget()
-    if not targetName or targetName == "" or targetName == "No Players" or targetName == "No Results" or targetName == "Select Player..." then return end
-
-    local targetPlr = Players:FindFirstChild(targetName)
+    local selectedOption = getFlyBehindTarget()
+    local targetPlr = getPlayerFromSelected(selectedOption)
+    
     local targetChar = targetPlr and targetPlr.Character
     local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
     
@@ -412,9 +418,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ==========================================
--- FLY ATTACHED
--- ==========================================
 local isFlyAttachedActive = false
 local attachOffset = CFrame.new(0, 0, 0)
 
@@ -435,10 +438,9 @@ end)
 
 RunService.Heartbeat:Connect(function()
     if not isFlyAttachedActive then return end
-    local targetName = getFlyAttachTarget()
-    if not targetName or targetName == "" or targetName == "No Players" or targetName == "No Results" or targetName == "Select Player..." then return end
-
-    local targetPlr = Players:FindFirstChild(targetName)
+    local selectedOption = getFlyAttachTarget()
+    local targetPlr = getPlayerFromSelected(selectedOption)
+    
     local targetChar = targetPlr and targetPlr.Character
     local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
     
@@ -452,20 +454,16 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ==========================================
--- TELEPORT TO PLAYER
--- ==========================================
 local getTeleportTarget = addSearchableDropdown(MiscTab, "Teleport Target", function(target) end)
 
 MiscTab:AddButton("Teleport to Selected Player", function()
-    local targetName = getTeleportTarget()
-    if targetName and targetName ~= "" and targetName ~= "No Players" and targetName ~= "No Results" and targetName ~= "Select Player..." then
-        local targetPlr = Players:FindFirstChild(targetName)
-        if targetPlr and targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") then
-            local myChar = LocalPlayer.Character
-            if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-                myChar.HumanoidRootPart.CFrame = targetPlr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
-            end
+    local selectedOption = getTeleportTarget()
+    local targetPlr = getPlayerFromSelected(selectedOption)
+    
+    if targetPlr and targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") then
+        local myChar = LocalPlayer.Character
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            myChar.HumanoidRootPart.CFrame = targetPlr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
         end
     end
 end)
