@@ -1060,3 +1060,34 @@ if OWNER_IDS[LocalPlayer.UserId] then
         broadcastKillAll()
     end)
 end
+
+MiscTab:AddSection("Spin Character")
+
+local isSpinActive = false
+local spinSpeed = 100
+
+MiscTab:AddToggle("Enable Spin Character", false, function(Value)
+    isSpinActive = Value
+end)
+
+MiscTab:AddSlider("Spin Speed", 10, 1000, 100, function(Value)
+    spinSpeed = Value
+end)
+
+local spinConn = RunService.RenderStepped:Connect(function(deltaTime)
+    if not isSpinActive then return end
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+
+    if hrp and humanoid and humanoid.Health > 0 then
+
+        local angle = math.rad(spinSpeed) * deltaTime
+        hrp.CFrame = hrp.CFrame * CFrame.Angles(0, angle, 0)
+    end
+end)
+
+if getgenv().ScriptConnections then
+    table.insert(getgenv().ScriptConnections, spinConn)
+end
