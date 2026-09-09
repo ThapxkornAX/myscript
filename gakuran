@@ -1091,3 +1091,138 @@ end)
 if getgenv().ScriptConnections then
     table.insert(getgenv().ScriptConnections, spinConn)
 end
+
+MiscTab:AddSection("Wang Lin Portal Step")
+
+local isWarpActive = false
+local maxMouseDistance = 300
+local warpCooldown = 0.5
+local lastWarpTime = 0
+
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local function spawnVoidPortal(cframe)
+    task.spawn(function()
+        local portal = Instance.new("Part")
+        portal.Name = "WangLinPortal"
+        portal.Size = Vector3.new(0.2, 1, 1)
+        
+        portal.CFrame = cframe * CFrame.Angles(0, math.rad(90), 0)
+        
+        portal.Anchored = true
+        portal.CanCollide = false
+        portal.Material = Enum.Material.Neon
+        portal.Color = Color3.fromRGB(130, 0, 255)
+        portal.Shape = Enum.PartType.Cylinder
+        portal.Parent = workspace
+
+        local ring = Instance.new("SelectionBox")
+        ring.Adornee = portal
+        ring.Color3 = Color3.fromRGB(220, 100, 255)
+        ring.LineThickness = 0.25
+        ring.Parent = portal
+
+        local particle = Instance.new("ParticleEmitter")
+        particle.Texture = "rbxassetid://243660364"
+        particle.Color = ColorSequence.new(Color3.fromRGB(180, 50, 255))
+        particle.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 5), NumberSequenceKeypoint.new(1, 0)})
+        particle.Lifetime = NumberRange.new(0.3, 0.7)
+        particle.Rate = 60
+        particle.Speed = NumberRange.new(3, 6)
+        particle.Parent = portal
+
+        local openTween = TweenService:Create(portal, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = Vector3.new(0.2, 12, 12)
+        })
+        openTween:Play()
+
+        local spinConnection
+        spinConnection = RunService.RenderStepped:Connect(function()
+            if portal and portal.Parent then
+                portal.CFrame = portal.CFrame * CFrame.Angles(0.08, 0, 0)
+            else
+                spinConnection:Disconnect()
+            end
+        end)
+
+        task.wait(0.5)
+
+        local closeTween = TweenService:Create(portal, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = Vector3.new(0.2, 0, 0)
+        })
+        closeTween:Play()
+
+        closeTween.Completed:Connect(function()
+            spinConnection:Disconnect()
+            portal:Destroy()
+        end)
+    end)
+end
+
+local function preventRagdoll(humanoid, hrp)
+    if not humanoid or not hrp then return end
+    humanoid.PlatformStand = false
+    humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+    hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+end
+
+local function performPortalWarp()
+    if tick() - lastWarpTime < warpCooldown then return end
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+
+    if hrp and humanoid and humanoid.Health > 0 then
+        lastWarpTime = tick()
+
+        local startCFrame = hrp.CFrame
+        local targetPos = Mouse.Hit.Position
+
+        local distance = (targetPos - startCFrame.Position).Magnitude
+        if distance > maxMouseDistance then
+            local direction = (targetPos - startCFrame.Position).Unit
+            targetPos = startCFrame.Position + (direction * maxMouseDistance)
+        end
+
+        local endCFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0), targetPos + hrp.CFrame.LookVector)
+
+        spawnVoidPortal(startCFrame)
+
+        spawnVoidPortal(endCFrame)
+
+        preventRagdoll(humanoid, hrp)
+
+        hrp.CFrame = endCFrame
+
+        preventRagdoll(humanoid, hrp)
+    end
+end
+
+MiscTab:AddToggle("Enable Wang Lin Portal Step", false, function(Value)
+    isWarpActive = Value
+end)
+
+MiscTab:AddSlider("Max Portal Distance", 50, 1000, 300, function(Value)
+    maxMouseDistance = Value
+end)
+
+local warpKeyConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if not isWarpActive then return end
+
+    if input.KeyCode == Enum.KeyCode.Q then
+        performPortalWarp()
+    end
+end)
+
+if getgenv().ScriptConnections then
+    table.insert(getgenv().ScriptConnections, warpKeyConn)
+end
