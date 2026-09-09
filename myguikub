@@ -407,9 +407,6 @@ function Library:AddTab(tabName, iconText)
         end)
     end
 
-    -- ==========================================
-    -- เพิ่มฟังก์ชัน ADD DROPDOWN
-    -- ==========================================
     function TabData:AddDropdown(dropdownTitle, options, callback)
         local DropdownFuncs = {}
         local isOpened = false
