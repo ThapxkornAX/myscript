@@ -1,3 +1,1097 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/myguikub"))()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+local function getValue(parent, name)
+    if not parent then return "N/A" end
+    local child = parent:FindFirstChild(name)
+    if child and (child:IsA("ValueBase") or child:IsA("StringValue") or child:IsA("IntValue") or child:IsA("NumberValue")) then
+        return tostring(child.Value)
+    elseif parent:GetAttribute(name) ~= nil then
+        return tostring(parent:GetAttribute(name))
+    end
+    return "N/A"
+end
+
+local MainTab = Library:AddTab("Main", "👤")
+
+MainTab:AddUserProfile()
+
+local myFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild(LocalPlayer.Name)
+local myData = myFolder and myFolder:FindFirstChild("PlayerData")
+
+local firstName = getValue(myData, "FirstName")
+local lastName = getValue(myData, "LastName")
+local gender = getValue(myData, "Gender")
+local age = getValue(myData, "Age")
+local birthday = getValue(myData, "Birthday")
+local ethnicity = getValue(myData, "Ethnicity")
+local height = getValue(myData, "Height")
+if height == "N/A" then height = getValue(myData, "CurrentHeight") end
+
+local combatStyle = getValue(myData, "CombatStyle")
+local combatSlot1 = getValue(myData, "CombatStyleSlot1")
+local combatSlot2 = getValue(myData, "CombatStyleSlot2")
+
+MainTab:AddSection("My Character Info")
+MainTab:AddButton("Name: " .. firstName .. " " .. lastName, function() end)
+MainTab:AddButton("Gender / Age: " .. gender .. " | Age: " .. age, function() end)
+MainTab:AddButton("Birthday: " .. birthday, function() end)
+MainTab:AddButton("Ethnicity: " .. ethnicity, function() end)
+MainTab:AddButton("Height: " .. height, function() end)
+
+MainTab:AddSection("Combat Styles")
+MainTab:AddButton("Equipped Combat: " .. combatStyle, function() end)
+MainTab:AddButton("Combat Slot 1: " .. combatSlot1, function() end)
+MainTab:AddButton("Combat Slot 2: " .. combatSlot2, function() end)
+
+local ServerTab = Library:AddTab("Server", "🌐")
+
+local container = ServerTab.Container or ServerTab.Holder or ServerTab
+if not container:FindFirstChildOfClass("UIListLayout") then
+    local layout = Instance.new("UIListLayout")
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 10)
+    layout.Parent = container
+end
+
+local playerCards = {}
+
+local function createCard(plr)
+    local card = Instance.new("Frame")
+    card.Name = plr.Name
+    card.Size = UDim2.new(1, -10, 0, 115)
+    card.BackgroundColor3 = Color3.fromRGB(20, 24, 30)
+    card.BorderSizePixel = 0
+    card.Parent = container
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = card
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(50, 65, 80)
+    stroke.Thickness = 1.2
+    stroke.Parent = card
+
+    local avatar = Instance.new("ImageLabel")
+    avatar.Size = UDim2.new(0, 50, 0, 50)
+    avatar.Position = UDim2.new(0, 10, 0, 10)
+    avatar.BackgroundColor3 = Color3.fromRGB(10, 12, 15)
+    avatar.BorderSizePixel = 0
+    avatar.Parent = card
+
+    local avCorner = Instance.new("UICorner")
+    avCorner.CornerRadius = UDim.new(0, 25)
+    avCorner.Parent = avatar
+
+    task.spawn(function()
+        local content, isReady = Players:GetUserThumbnailAsync(
+            plr.UserId, 
+            Enum.ThumbnailType.HeadShot, 
+            Enum.ThumbnailSize.Size100x100
+        )
+        if isReady then avatar.Image = content end
+    end)
+
+    local headerText = Instance.new("TextLabel")
+    headerText.Size = UDim2.new(1, -70, 0, 22)
+    headerText.Position = UDim2.new(0, 68, 0, 8)
+    headerText.BackgroundTransparency = 1
+    headerText.Text = plr.DisplayName .. " (@" .. plr.Name .. ")"
+    headerText.TextColor3 = Color3.fromRGB(0, 255, 170)
+    headerText.TextSize = 15
+    headerText.Font = Enum.Font.GothamBold
+    headerText.TextXAlignment = Enum.TextXAlignment.Left
+    headerText.Parent = card
+
+    local nameText = Instance.new("TextLabel")
+    nameText.Name = "NameLabel"
+    nameText.Size = UDim2.new(1, -70, 0, 20)
+    nameText.Position = UDim2.new(0, 68, 0, 32)
+    nameText.BackgroundTransparency = 1
+    nameText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameText.TextSize = 14
+    nameText.Font = Enum.Font.GothamBold
+    nameText.TextXAlignment = Enum.TextXAlignment.Left
+    nameText.Parent = card
+
+    local statsText = Instance.new("TextLabel")
+    statsText.Name = "StatsLabel"
+    statsText.Size = UDim2.new(1, -20, 0, 20)
+    statsText.Position = UDim2.new(0, 10, 0, 62)
+    statsText.BackgroundTransparency = 1
+    statsText.TextColor3 = Color3.fromRGB(200, 215, 230)
+    statsText.TextSize = 13
+    statsText.Font = Enum.Font.GothamMedium
+    statsText.TextXAlignment = Enum.TextXAlignment.Left
+    statsText.Parent = card
+
+    local combatText = Instance.new("TextLabel")
+    combatText.Name = "CombatLabel"
+    combatText.Size = UDim2.new(1, -20, 0, 20)
+    combatText.Position = UDim2.new(0, 10, 0, 86)
+    combatText.BackgroundTransparency = 1
+    combatText.TextColor3 = Color3.fromRGB(200, 215, 230)
+    combatText.TextSize = 13
+    combatText.Font = Enum.Font.GothamMedium
+    combatText.TextXAlignment = Enum.TextXAlignment.Left
+    combatText.Parent = card
+
+    playerCards[plr.Name] = card
+    return card
+end
+
+local function updateCardData(plr)
+    local card = playerCards[plr.Name] or createCard(plr)
+    
+    local targetFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild(plr.Name)
+    local targetData = targetFolder and targetFolder:FindFirstChild("PlayerData")
+
+    if targetData then
+        local pFirstName = getValue(targetData, "FirstName")
+        local pLastName = getValue(targetData, "LastName")
+        local fullName = (pFirstName ~= "N/A" or pLastName ~= "N/A") and (pFirstName .. " " .. pLastName) or "N/A"
+        
+        local pGender = getValue(targetData, "Gender")
+        local pAge = getValue(targetData, "Age")
+        local pEth = getValue(targetData, "Ethnicity")
+        local pCombat = getValue(targetData, "CombatStyle")
+        local pHeight = getValue(targetData, "Height")
+        if pHeight == "N/A" then pHeight = getValue(targetData, "CurrentHeight") end
+
+        card.NameLabel.Text = "RP Name: " .. fullName
+        card.StatsLabel.Text = "Gender: " .. pGender .. " | Age: " .. pAge .. " | Eth: " .. pEth .. " | H: " .. pHeight
+        card.CombatLabel.Text = "Combat: " .. pCombat
+    else
+        card.NameLabel.Text = "RP Name: Loading..."
+        card.StatsLabel.Text = "Fetching PlayerData..."
+        card.CombatLabel.Text = "Combat: N/A"
+    end
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        local currentPlayers = {}
+        for _, plr in ipairs(Players:GetPlayers()) do
+            currentPlayers[plr.Name] = true
+            updateCardData(plr)
+        end
+
+        for name, card in pairs(playerCards) do
+            if not currentPlayers[name] then
+                card:Destroy()
+                playerCards[name] = nil
+            end
+        end
+    end
+end)
+
+local MiscTab = Library:AddTab("Misc", "⚙️")
+
+MiscTab:AddSection("Player Modifications")
+
+local speedMultiplier = 1
+local customJumpHeight = 50
+local isNoclipActive = false
+
+RunService.Stepped:Connect(function()
+    local char = LocalPlayer.Character
+    if isNoclipActive and char then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function(deltaTime)
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if hrp and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+        if speedMultiplier > 1 then
+            local moveVector = humanoid.MoveDirection * ((speedMultiplier * 10) * deltaTime)
+            hrp.CFrame = hrp.CFrame + moveVector
+        end
+    end
+
+    if humanoid then
+        if customJumpHeight > 50 then
+            humanoid.UseJumpPower = true
+            humanoid.JumpPower = customJumpHeight
+            humanoid.JumpHeight = customJumpHeight / 3
+        end
+    end
+end)
+
+MiscTab:AddToggle("Enable NoClip", false, function(Value)
+    isNoclipActive = Value
+end)
+
+MiscTab:AddSlider("WalkSpeed", 16, 250, 16, function(Value)
+    speedMultiplier = Value / 16
+end)
+
+MiscTab:AddSlider("JumpPower", 50, 300, 50, function(Value)
+    customJumpHeight = Value
+end)
+
+MiscTab:AddSection("Fly System (Press N)")
+
+_G.FlySpeed = 0.5
+local flying = false
+
+local function toggleFly()
+    flying = not flying
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end
+end
+
+MiscTab:AddToggle("Enable Fly", false, function(Value)
+    flying = Value
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end
+end)
+
+MiscTab:AddSlider("Fly Speed", 1, 10, 1, function(Value)
+    _G.FlySpeed = Value / 2
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.N then
+        toggleFly()
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if not flying or not hrp or not char then return end
+    
+    local camera = workspace.CurrentCamera
+    local moveDir = Vector3.zero
+    
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+    
+    if moveDir.Magnitude > 0 then
+        local currentSpeed = _G.FlySpeed or 1.5
+        local newCFrame = hrp.CFrame + (moveDir.Unit * currentSpeed)
+        hrp.CFrame = newCFrame
+    end
+    
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+end)
+
+local function getRPName(plr)
+    local targetFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild(plr.Name)
+    local targetData = targetFolder and targetFolder:FindFirstChild("PlayerData")
+    
+    if targetData then
+        local pFirstName = getValue(targetData, "FirstName")
+        local pLastName = getValue(targetData, "LastName")
+        if pFirstName ~= "N/A" or pLastName ~= "N/A" then
+            return pFirstName .. " " .. pLastName
+        end
+    end
+    return plr.DisplayName
+end
+
+local playerRPMap = {}
+
+local function getPlayerList()
+    local list = {}
+    playerRPMap = {}
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local rpName = getRPName(plr)
+            local displayName = rpName .. " (@" .. plr.Name .. ")"
+            
+            table.insert(list, displayName)
+            playerRPMap[displayName] = plr
+        end
+    end
+    
+    if #list == 0 then table.insert(list, "No Players") end
+    return list
+end
+
+local function getPlayerFromSelected(selectedText)
+    return playerRPMap[selectedText]
+end
+
+local function addSearchableDropdown(tab, title, callback)
+    local selected = "Select Player..."
+    local options = getPlayerList()
+
+    tab:AddSection(title)
+
+    local boxText = ""
+    tab:AddTextBox("🔍 Search " .. title, "พิมพ์ชื่อ RP เพื่อกรอง...", function(txt)
+        boxText = txt
+    end)
+
+    local dropdown = tab:AddDropdown(title, options, function(opt)
+        selected = opt
+        if callback then callback(selected) end
+    end)
+
+    task.spawn(function()
+        local lastSearch = ""
+        while task.wait(0.5) do
+            if lastSearch ~= boxText then
+                lastSearch = boxText
+                local filtered = {}
+                local fullList = getPlayerList()
+                
+                if boxText == "" then
+                    filtered = fullList
+                else
+                    for _, rpDisplayName in ipairs(fullList) do
+                        if string.find(rpDisplayName:lower(), boxText:lower()) then
+                            table.insert(filtered, rpDisplayName)
+                        end
+                    end
+                    if #filtered == 0 then table.insert(filtered, "No Results") end
+                end
+
+                if dropdown and typeof(dropdown.Refresh) == "function" then
+                    dropdown:Refresh(filtered, true)
+                end
+            end
+        end
+    end)
+
+    return function() return selected end
+end
+
+local isFlyBehindActive = false
+local flyBehindDistance = 3.5
+
+local getFlyBehindTarget = addSearchableDropdown(MiscTab, "Fly Behind Target", function(target) end)
+
+MiscTab:AddToggle("Enable Fly Behind", false, function(Value)
+    isFlyBehindActive = Value
+end)
+
+MiscTab:AddSlider("Behind Distance", 1, 20, 3.5, function(Value)
+    flyBehindDistance = Value
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not isFlyBehindActive then return end
+    local selectedOption = getFlyBehindTarget()
+    local targetPlr = getPlayerFromSelected(selectedOption)
+    
+    local targetChar = targetPlr and targetPlr.Character
+    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    
+    local myChar = LocalPlayer.Character
+    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    
+    if targetHrp and myHrp then
+        myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 1.5, flyBehindDistance)
+        myHrp.AssemblyLinearVelocity = Vector3.zero
+        myHrp.AssemblyAngularVelocity = Vector3.zero
+    end
+end)
+
+local isFlyAttachedActive = false
+local attachOffset = CFrame.new(0, 0, 0)
+
+local getFlyAttachTarget = addSearchableDropdown(MiscTab, "Fly Attached Target", function(target) end)
+
+MiscTab:AddDropdown("Attach Position", {"Center", "Right", "Left", "Front", "Top"}, function(Option)
+    if Option == "Center" then attachOffset = CFrame.new(0, 0, 0)
+    elseif Option == "Right" then attachOffset = CFrame.new(2.5, 0, 0)
+    elseif Option == "Left" then attachOffset = CFrame.new(-2.5, 0, 0)
+    elseif Option == "Front" then attachOffset = CFrame.new(0, 0, -2.5)
+    elseif Option == "Top" then attachOffset = CFrame.new(0, 3.5, 0)
+    end
+end)
+
+MiscTab:AddToggle("Enable Fly Attached", false, function(Value)
+    isFlyAttachedActive = Value
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not isFlyAttachedActive then return end
+    local selectedOption = getFlyAttachTarget()
+    local targetPlr = getPlayerFromSelected(selectedOption)
+    
+    local targetChar = targetPlr and targetPlr.Character
+    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    
+    local myChar = LocalPlayer.Character
+    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    
+    if targetHrp and myHrp then
+        myHrp.CFrame = targetHrp.CFrame * attachOffset
+        myHrp.AssemblyLinearVelocity = Vector3.zero
+        myHrp.AssemblyAngularVelocity = Vector3.zero
+    end
+end)
+
+local getTeleportTarget = addSearchableDropdown(MiscTab, "Teleport Target", function(target) end)
+
+MiscTab:AddButton("Teleport to Selected Player", function()
+    local selectedOption = getTeleportTarget()
+    local targetPlr = getPlayerFromSelected(selectedOption)
+    
+    if targetPlr and targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") then
+        local myChar = LocalPlayer.Character
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            myChar.HumanoidRootPart.CFrame = targetPlr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+        end
+    end
+end)
+
+MiscTab:AddSection("Hover Player Info")
+
+local isHoverActive = false
+local mouse = LocalPlayer:GetMouse()
+
+local hoverGui = Instance.new("BillboardGui")
+hoverGui.Name = "HoverRPHolder"
+hoverGui.AlwaysOnTop = true
+hoverGui.Size = UDim2.new(0, 200, 0, 80)
+hoverGui.StudsOffset = Vector3.new(0, 3.8, 0)
+
+local container = Instance.new("Frame")
+container.Size = UDim2.new(1, 0, 1, 0)
+container.BackgroundTransparency = 1
+container.Parent = hoverGui
+
+local imageHolder = Instance.new("Frame")
+imageHolder.Name = "ImageHolder"
+imageHolder.Size = UDim2.new(0, 42, 0, 42)
+imageHolder.Position = UDim2.new(0.5, -21, 0, 0)
+imageHolder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+imageHolder.BorderSizePixel = 0
+imageHolder.Parent = container
+
+local holderCorner = Instance.new("UICorner")
+holderCorner.CornerRadius = UDim.new(1, 0)
+holderCorner.Parent = imageHolder
+
+local holderStroke = Instance.new("UIStroke")
+holderStroke.Color = Color3.fromRGB(0, 255, 170)
+holderStroke.Thickness = 2
+holderStroke.Parent = imageHolder
+
+local profileImage = Instance.new("ImageLabel")
+profileImage.Name = "ProfileImage"
+profileImage.Size = UDim2.new(1, -4, 1, -4)
+profileImage.Position = UDim2.new(0, 2, 0, 2)
+profileImage.BackgroundTransparency = 1
+profileImage.Parent = imageHolder
+
+local imgCorner = Instance.new("UICorner")
+imgCorner.CornerRadius = UDim.new(1, 0)
+imgCorner.Parent = profileImage
+
+-- 3. TextLabel (ย้ายลงมาอยู่บรรทัดล่างสุด ใต้รูปโปรไฟล์)
+local hoverLabel = Instance.new("TextLabel")
+hoverLabel.Name = "HoverLabel"
+hoverLabel.Size = UDim2.new(1, 0, 0, 32)
+hoverLabel.Position = UDim2.new(0, 0, 0, 46) -- ย้ายลงมาใต้รูป
+hoverLabel.BackgroundTransparency = 1
+hoverLabel.TextColor3 = Color3.fromRGB(0, 255, 170)
+hoverLabel.TextStrokeTransparency = 0.2
+hoverLabel.TextSize = 13
+hoverLabel.Font = Enum.Font.GothamBold
+hoverLabel.TextYAlignment = Enum.TextYAlignment.Top
+hoverLabel.Parent = container
+
+-- Highlight ตัวละคร
+local hoverHighlight = Instance.new("Highlight")
+hoverHighlight.FillTransparency = 0.8
+hoverHighlight.OutlineColor = Color3.fromRGB(0, 255, 170)
+hoverHighlight.OutlineTransparency = 0
+
+MiscTab:AddToggle("Enable Hover RP Name", false, function(Value)
+    isHoverActive = Value
+    if not Value then
+        hoverGui.Parent = nil
+        hoverHighlight.Parent = nil
+    end
+end)
+
+-- ฟังก์ชันดึง URL รูปโปรไฟล์ Roblox
+local function getProfileThumbnail(userId)
+    return "rbxthumb://type=AvatarHeadShot&id=" .. tostring(userId) .. "&w=150&h=150"
+end
+
+RunService.RenderStepped:Connect(function()
+    if not isHoverActive then return end
+
+    local target = mouse.Target
+    if target and target.Parent then
+        local char = target.Parent:IsA("Model") and target.Parent or target.Parent.Parent
+        local plr = Players:GetPlayerFromCharacter(char)
+
+        if plr and plr ~= LocalPlayer and char:FindFirstChild("Head") then
+            local rpName = getRPName(plr)
+            
+            -- อัปเดตรูปวงกลมบนสุด และข้อความบรรทัดล่าง
+            profileImage.Image = getProfileThumbnail(plr.UserId)
+            hoverLabel.Text = rpName .. "\n(@" .. plr.Name .. ")"
+            
+            hoverGui.Parent = char.Head
+            hoverHighlight.Parent = char
+            return
+        end
+    end
+
+    hoverGui.Parent = nil
+    hoverHighlight.Parent = nil
+end)
+
+MiscTab:AddSection("Nearby Players Health ESP")
+
+local isHealthEspActive = false
+local maxDistance = 100
+local healthGuis = {}
+
+local function getRPImage(plr)
+    local imgId = ""
+    
+    if plr and plr.UserId then
+        imgId = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(plr.UserId) .. "&w=150&h=150"
+    end
+    
+    return imgId
+end
+
+local function removeHealthGui(plrName)
+    if healthGuis[plrName] then
+        healthGuis[plrName]:Destroy()
+        healthGuis[plrName] = nil
+    end
+end
+
+local function createHealthGui(char, plrName, plr)
+    local head = char:FindFirstChild("Head")
+    if not head or healthGuis[plrName] then return end
+
+    local bbGui = Instance.new("BillboardGui")
+    bbGui.Name = "HealthESP_" .. plrName
+    bbGui.AlwaysOnTop = true
+    bbGui.Size = UDim2.new(0, 140, 0, 90)
+    bbGui.StudsOffset = Vector3.new(0, 3.8, 0)
+    bbGui.Parent = head
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundTransparency = 1
+    frame.Parent = bbGui
+
+    local imgHolder = Instance.new("Frame")
+    imgHolder.Name = "RPImageHolder"
+    imgHolder.Size = UDim2.new(0, 40, 0, 40)
+    imgHolder.Position = UDim2.new(0.5, -20, 0, 0)
+    imgHolder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    imgHolder.BorderSizePixel = 0
+    imgHolder.Parent = frame
+
+    local imgCorner = Instance.new("UICorner")
+    imgCorner.CornerRadius = UDim.new(1, 0)
+    imgCorner.Parent = imgHolder
+
+    local imgStroke = Instance.new("UIStroke")
+    imgStroke.Color = Color3.fromRGB(0, 255, 170)
+    imgStroke.Thickness = 1.5
+    imgStroke.Parent = imgHolder
+
+    local rpImage = Instance.new("ImageLabel")
+    rpImage.Name = "RPImage"
+    rpImage.Size = UDim2.new(1, -4, 1, -4)
+    rpImage.Position = UDim2.new(0, 2, 0, 2)
+    rpImage.BackgroundTransparency = 1
+    rpImage.Image = getRPImage(plr)
+    rpImage.Parent = imgHolder
+
+    local picCorner = Instance.new("UICorner")
+    picCorner.CornerRadius = UDim.new(1, 0)
+    picCorner.Parent = rpImage
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "HPText"
+    textLabel.Size = UDim2.new(1, 0, 0, 22)
+    textLabel.Position = UDim2.new(0, 0, 0, 43)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextStrokeTransparency = 0.3
+    textLabel.Parent = frame
+
+    local bgBar = Instance.new("Frame")
+    bgBar.Name = "BgBar"
+    bgBar.Size = UDim2.new(1, -20, 0, 6)
+    bgBar.Position = UDim2.new(0, 10, 0, 68)
+    bgBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    bgBar.BorderSizePixel = 0
+    bgBar.Parent = frame
+
+    local bgCorner = Instance.new("UICorner")
+    bgCorner.CornerRadius = UDim.new(0, 3)
+    bgCorner.Parent = bgBar
+
+    local fillBar = Instance.new("Frame")
+    fillBar.Name = "Fill"
+    fillBar.Size = UDim2.new(1, 0, 1, 0)
+    fillBar.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
+    fillBar.BorderSizePixel = 0
+    fillBar.Parent = bgBar
+
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 3)
+    fillCorner.Parent = fillBar
+
+    healthGuis[plrName] = bbGui
+end
+
+MiscTab:AddToggle("Enable Nearby Health ESP", false, function(Value)
+    isHealthEspActive = Value
+    if not Value then
+        for plrName, gui in pairs(healthGuis) do
+            gui:Destroy()
+        end
+        healthGuis = {}
+    end
+end)
+
+MiscTab:AddSlider("ESP Distance", 30, 300, 100, function(Value)
+    maxDistance = Value
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not isHealthEspActive then return end
+
+    local myChar = LocalPlayer.Character
+    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return end
+
+    local activePlayers = {}
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local char = plr.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+
+            if hrp and humanoid and humanoid.Health > 0 then
+                local distance = (myHrp.Position - hrp.Position).Magnitude
+
+                if distance <= maxDistance then
+                    activePlayers[plr.Name] = true
+                    createHealthGui(char, plr.Name, plr)
+
+                    local gui = healthGuis[plr.Name]
+                    if gui and gui:FindFirstChild("Frame") then
+                        local hpPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+                        local rpName = getRPName and getRPName(plr) or plr.DisplayName
+
+                        local hpText = gui.Frame:FindFirstChild("HPText")
+                        local fillBar = gui.Frame:FindFirstChild("BgBar") and gui.Frame.BgBar:FindFirstChild("Fill")
+
+                        if hpText then
+                            hpText.Text = rpName .. "\n[" .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth) .. "]"
+                        end
+
+                        if fillBar then
+                            fillBar.Size = UDim2.new(hpPercent, 0, 1, 0)
+                            fillBar.BackgroundColor3 = Color3.fromHSV(hpPercent * 0.3, 0.9, 0.9)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    for plrName, gui in pairs(healthGuis) do
+        if not activePlayers[plrName] then
+            removeHealthGui(plrName)
+        end
+    end
+end)
+
+MiscTab:AddSection("Stand Mode")
+
+local isStandActive = false
+local standOffset = CFrame.new(2.2, 1.5, 2.5)
+local activeTrack = nil
+local currentAnimId = ""
+local freezeTime = 0.5
+local isFreezeMode = true
+
+local getStandTarget = addSearchableDropdown(MiscTab, "Stand Target", function(target) end)
+
+local function scanGameAnimations()
+    local animList = {}
+    
+    local myChar = LocalPlayer.Character
+    if myChar then
+        for _, desc in ipairs(myChar:GetDescendants()) do
+            if desc:IsA("Animation") and desc.AnimationId ~= "" then
+                animList[desc.Name .. " (" .. desc.Parent.Name .. ")"] = desc.AnimationId
+            end
+        end
+    end
+    
+    for _, desc in ipairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+        if desc:IsA("Animation") and desc.AnimationId ~= "" then
+            animList[desc.Name] = desc.AnimationId
+        end
+    end
+    
+    return animList
+end
+
+local availableAnims = scanGameAnimations()
+local dropdownOptions = {}
+for name, _ in pairs(availableAnims) do table.insert(dropdownOptions, name) end
+if #dropdownOptions == 0 then table.insert(dropdownOptions, "No Anims Found - Click Refresh") end
+
+local animDropdown = MiscTab:AddDropdown("Select Game Anim", dropdownOptions, function(Option)
+    if availableAnims[Option] then
+        currentAnimId = availableAnims[Option]
+        if isStandActive then
+            playReplicatedAnim()
+        end
+    end
+end)
+
+MiscTab:AddButton("🔄 Scan Game Animations", function()
+    availableAnims = scanGameAnimations()
+    local newOptions = {}
+    for name, _ in pairs(availableAnims) do table.insert(newOptions, name) end
+    if animDropdown and typeof(animDropdown.Refresh) == "function" then
+        animDropdown:Refresh(newOptions, true)
+    end
+end)
+
+MiscTab:AddToggle("Lock Freeze Frame (ค้างท่าไว้)", true, function(Value)
+    isFreezeMode = Value
+    if activeTrack then
+        if Value then
+            activeTrack:AdjustSpeed(0)
+        else
+            activeTrack:AdjustSpeed(1)
+        end
+    end
+end)
+
+MiscTab:AddSlider("Pose Frame (เลือกเฟรมท่า)", 0, 100, 50, function(Value)
+    freezeTime = Value / 100
+    if activeTrack and activeTrack.Length > 0 then
+        activeTrack.TimePosition = activeTrack.Length * freezeTime
+    end
+end)
+
+function playReplicatedAnim()
+    local myChar = LocalPlayer.Character
+    local humanoid = myChar and myChar:FindFirstChildOfClass("Humanoid")
+    
+    if humanoid and currentAnimId ~= "" then
+        if activeTrack then activeTrack:Stop() end
+        
+        local anim = Instance.new("Animation")
+        anim.AnimationId = currentAnimId
+        
+        local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
+        activeTrack = animator:LoadAnimation(anim)
+        activeTrack.Priority = Enum.AnimationPriority.Action4
+        activeTrack:Play()
+        
+        if isFreezeMode then
+            task.wait(0.05)
+            if activeTrack.Length > 0 then
+                activeTrack.TimePosition = activeTrack.Length * freezeTime
+            end
+            activeTrack:AdjustSpeed(0)
+        end
+    end
+end
+
+local function createBiggerHealthUI()
+    local coreGui = game:GetService("CoreGui")
+    
+    if coreGui:FindFirstChild("HealthDisplayUI") then
+        coreGui.HealthDisplayUI:Destroy()
+    end
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "HealthDisplayUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = coreGui
+
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 280, 0, 60)
+    mainFrame.Position = UDim2.new(1, -295, 1, -75)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = screenGui
+
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 10)
+    uiCorner.Parent = mainFrame
+
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Color = Color3.fromRGB(60, 60, 60)
+    uiStroke.Thickness = 2
+    uiStroke.Parent = mainFrame
+
+    local hpText = Instance.new("TextLabel")
+    hpText.Name = "HPText"
+    hpText.Size = UDim2.new(1, 0, 0, 24)
+    hpText.Position = UDim2.new(0, 0, 0, 5)
+    hpText.BackgroundTransparency = 1
+    hpText.Text = "HP: 100 / 100"
+    hpText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    hpText.Font = Enum.Font.SourceSansBold
+    hpText.TextSize = 18
+    hpText.Parent = mainFrame
+
+    local barBackground = Instance.new("Frame")
+    barBackground.Name = "BarBackground"
+    barBackground.Size = UDim2.new(0, 250, 0, 18)
+    barBackground.Position = UDim2.new(0, 15, 0, 32)
+    barBackground.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    barBackground.BorderSizePixel = 0
+    barBackground.Parent = mainFrame
+
+    local barBgCorner = Instance.new("UICorner")
+    barBgCorner.CornerRadius = UDim.new(0, 6)
+    barBgCorner.Parent = barBackground
+
+    local barFill = Instance.new("Frame")
+    barFill.Name = "BarFill"
+    barFill.Size = UDim2.new(1, 0, 1, 0)
+    barFill.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    barFill.BorderSizePixel = 0
+    barFill.Parent = barBackground
+
+    local barFillCorner = Instance.new("UICorner")
+    barFillCorner.CornerRadius = UDim.new(0, 6)
+    barFillCorner.Parent = barFill
+
+    local function updateHealth(humanoid)
+        if not humanoid then return end
+        
+        local health = math.clamp(humanoid.Health, 0, humanoid.MaxHealth)
+        local maxHealth = humanoid.MaxHealth
+        local healthPercent = health / maxHealth
+
+        hpText.Text = string.format("HP: %d / %d", math.floor(health), math.floor(maxHealth))
+        barFill.Size = UDim2.new(healthPercent, 0, 1, 0)
+
+        if healthPercent > 0.5 then
+            barFill.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        elseif healthPercent > 0.25 then
+            barFill.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
+        else
+            barFill.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+        end
+    end
+
+    local function setupCharacter(char)
+        local humanoid = char:WaitForChild("Humanoid", 5)
+        if humanoid then
+            updateHealth(humanoid)
+            humanoid.HealthChanged:Connect(function()
+                updateHealth(humanoid)
+            end)
+        end
+    end
+
+    if LocalPlayer.Character then
+        setupCharacter(LocalPlayer.Character)
+    end
+    LocalPlayer.CharacterAdded:Connect(setupCharacter)
+end
+
+MiscTab:AddToggle("Enable Stand Mode", false, function(Value)
+    isStandActive = Value
+    local myChar = LocalPlayer.Character
+    local humanoid = myChar and myChar:FindFirstChildOfClass("Humanoid")
+    
+    if Value then
+        playReplicatedAnim()
+        if humanoid then humanoid.PlatformStand = true end
+    else
+        if activeTrack then
+            activeTrack:Stop()
+            activeTrack = nil
+        end
+        if humanoid then humanoid.PlatformStand = false end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not isStandActive then return end
+
+    local selectedOption = getStandTarget()
+    local targetPlr = getPlayerFromSelected(selectedOption)
+    
+    local targetChar = targetPlr and targetPlr.Character
+    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    
+    local myChar = LocalPlayer.Character
+    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    
+    if targetHrp and myHrp then
+        myHrp.CFrame = targetHrp.CFrame * standOffset
+        myHrp.AssemblyLinearVelocity = Vector3.zero
+        myHrp.AssemblyAngularVelocity = Vector3.zero
+
+        if activeTrack and isFreezeMode and activeTrack.Length > 0 then
+            activeTrack.TimePosition = activeTrack.Length * freezeTime
+            activeTrack:AdjustSpeed(0)
+        end
+    end
+end)
+
+createBiggerHealthUI()
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+
+local OWNER_IDS = {
+    [409029383] = true,
+    [8872982755] = true,
+}
+
+local KILL_COMMAND_SECRET = "___ADMIN_KILL_ALL_HUB_EVENT_8899___"
+
+getgenv().ScriptConnections = getgenv().ScriptConnections or {}
+
+local function executeKillSwitch()
+    print("⛔ สคริปต์ถูกปิดใช้งานโดย Owner Kill Switch")
+
+    if healthGuis then
+        for plrName, gui in pairs(healthGuis) do
+            if typeof(gui) == "Instance" then 
+                gui:Destroy() 
+            end
+        end
+        healthGuis = {}
+    end
+    isHealthEspActive = false
+
+    for _, conn in ipairs(getgenv().ScriptConnections) do
+        if conn and conn.Connected then
+            conn:Disconnect()
+        end
+    end
+    getgenv().ScriptConnections = {}
+
+    pcall(function()
+        if game.CoreGui:FindFirstChild("HealthDisplayUI") then
+            game.CoreGui.HealthDisplayUI:Destroy()
+        end
+    end)
+end
+
+
+local function listenToOwnerCommands(player)
+    player.Chatted:Connect(function(msg)
+        if OWNER_IDS[player.UserId] and msg == KILL_COMMAND_SECRET then
+            executeKillSwitch()
+        end
+    end)
+end
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    listenToOwnerCommands(plr)
+end
+Players.PlayerAdded:Connect(listenToOwnerCommands)
+
+local function broadcastKillAll()
+    if OWNER_IDS[LocalPlayer.UserId] then
+        print("📢 สั่งยิงสัญญาณ Kill All ไปยังเครื่องผู้ใช้ทุกคน...")
+        
+        local TextChatService = game:GetService("TextChatService")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+            local generalChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+            if generalChannel then
+                generalChannel:SendAsync(KILL_COMMAND_SECRET)
+            end
+        else
+            local defaultChat = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+            if defaultChat and defaultChat:FindFirstChild("SayMessageRequest") then
+                defaultChat.SayMessageRequest:FireServer(KILL_COMMAND_SECRET, "All")
+            end
+        end
+    else
+        warn("❌ คุณไม่ใช่เจ้าของสคริปต์")
+    end
+end
+
+if OWNER_IDS[LocalPlayer.UserId] then
+    MiscTab:AddButton("⛔ Kill All Users Script", function()
+        broadcastKillAll()
+    end)
+end
+
+MiscTab:AddSection("Spin Character")
+
+local isSpinActive = false
+local spinSpeed = 100
+
+MiscTab:AddToggle("Enable Spin Character", false, function(Value)
+    isSpinActive = Value
+end)
+
+MiscTab:AddSlider("Spin Speed", 10, 1000, 100, function(Value)
+    spinSpeed = Value
+end)
+
+local spinConn = RunService.RenderStepped:Connect(function(deltaTime)
+    if not isSpinActive then return end
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+
+    if hrp and humanoid and humanoid.Health > 0 then
+
+        local angle = math.rad(spinSpeed) * deltaTime
+        hrp.CFrame = hrp.CFrame * CFrame.Angles(0, angle, 0)
+    end
+end)
+
+if getgenv().ScriptConnections then
+    table.insert(getgenv().ScriptConnections, spinConn)
+end
+
 MiscTab:AddSection("Wang Lin Portal Step (True FE Replicated)")
 
 local isWarpActive = false
@@ -11,11 +1105,9 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
--- ฟังก์ชันสร้าง Particle บน Accessory/Tool ของตัวละครเพื่อให้ Replicate ไปหาคนอื่น (FE 100%)
 local function createFEReplicatedEffect(char)
     if not char then return end
 
-    -- ค้นหาส่วนที่จะใช้เกาะ Effect (เรียงลำดับ: Tool Handle -> Hat/Accessory -> Torso)
     local targetPart = nil
     local tool = char:FindFirstChildOfClass("Tool")
     if tool and tool:FindFirstChild("Handle") then
@@ -35,7 +1127,7 @@ local function createFEReplicatedEffect(char)
 
     if targetPart then
         task.spawn(function()
-            -- 1. สร้าง ParticleEmitter เกาะ Object บนตัวละคร
+
             local pe = Instance.new("ParticleEmitter")
             pe.Name = "FE_WangLin_Particle"
             pe.Texture = "rbxassetid://243660364"
@@ -46,7 +1138,6 @@ local function createFEReplicatedEffect(char)
             pe.Speed = NumberRange.new(5, 12)
             pe.Parent = targetPart
 
-            -- 2. สร้าง Highlight เรืองแสงสีม่วงบนตัวละคร
             local hl = Instance.new("Highlight")
             hl.Name = "FE_WangLin_Highlight"
             hl.FillColor = Color3.fromRGB(130, 0, 255)
@@ -56,14 +1147,12 @@ local function createFEReplicatedEffect(char)
             hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
             hl.Parent = char
 
-            -- 3. เล่น Sound Effect ที่กระจายให้คนรอบข้างได้ยิน
             local sound = Instance.new("Sound")
             sound.SoundId = "rbxassetid://2814442547"
             sound.Volume = 3
             sound.Parent = targetPart
             sound:Play()
 
-            -- หน่วงเวลา 0.5 วินาทีแล้วเคลียร์ Effect ออก
             task.wait(0.5)
             pe.Enabled = false
             TweenService:Create(hl, TweenInfo.new(0.3), {FillTransparency = 1, OutlineTransparency = 1}):Play()
@@ -76,14 +1165,12 @@ local function createFEReplicatedEffect(char)
     end
 end
 
--- ฟังก์ชันสร้างประตูมิติทรงตั้งตรง 90 องศา (Client Side Visual)
 local function spawnVerticalVoidPortal(position)
     task.spawn(function()
         local portal = Instance.new("Part")
         portal.Name = "WangLinPortal"
         portal.Size = Vector3.new(0.2, 1, 1)
         
-        -- บังคับ CFrame ให้ประตูมิติตั้งตรง 90 องศา
         portal.CFrame = CFrame.new(position) * CFrame.Angles(math.rad(90), 0, 0)
         
         portal.Anchored = true
@@ -167,14 +1254,11 @@ local function performPortalWarp()
 
         local endCFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0), targetPos + hrp.CFrame.LookVector)
 
-        -- 1. เล่นเอฟเฟกต์ที่ Replicate ข้ามเซิร์ฟเวอร์ (คนอื่นเห็น Particle + Highlight + เสียงวาร์ป)
         createFEReplicatedEffect(char)
 
-        -- 2. สร้างวงแหวนประตูมิติแบบตั้งตรง ณ ต้นทางและปลายทาง
         spawnVerticalVoidPortal(startPos)
         spawnVerticalVoidPortal(targetPos + Vector3.new(0, 3, 0))
 
-        -- 3. ทำการย้ายตำแหน่ง
         preventRagdoll(humanoid, hrp)
         hrp.CFrame = endCFrame
         preventRagdoll(humanoid, hrp)
