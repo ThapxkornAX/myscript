@@ -1092,7 +1092,7 @@ if getgenv().ScriptConnections then
     table.insert(getgenv().ScriptConnections, spinConn)
 end
 
-MiscTab:AddSection("Wang Lin Portal Step")
+MiscTab:AddSection("Wang Lin Portal Step (True FE Replicated)")
 
 local isWarpActive = false
 local maxMouseDistance = 300
@@ -1105,13 +1105,73 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
-local function spawnVoidPortal(cframe)
+local function createFEReplicatedEffect(char)
+    if not char then return end
+
+    local targetPart = nil
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool and tool:FindFirstChild("Handle") then
+        targetPart = tool.Handle
+    else
+        for _, child in ipairs(char:GetChildren()) do
+            if child:IsA("Accessory") and child:FindFirstChild("Handle") then
+                targetPart = child.Handle
+                break
+            end
+        end
+    end
+
+    if not targetPart then
+        targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+    end
+
+    if targetPart then
+        task.spawn(function()
+
+            local pe = Instance.new("ParticleEmitter")
+            pe.Name = "FE_WangLin_Particle"
+            pe.Texture = "rbxassetid://243660364"
+            pe.Color = ColorSequence.new(Color3.fromRGB(180, 50, 255))
+            pe.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 6), NumberSequenceKeypoint.new(1, 0)})
+            pe.Lifetime = NumberRange.new(0.4, 0.8)
+            pe.Rate = 100
+            pe.Speed = NumberRange.new(5, 12)
+            pe.Parent = targetPart
+
+            local hl = Instance.new("Highlight")
+            hl.Name = "FE_WangLin_Highlight"
+            hl.FillColor = Color3.fromRGB(130, 0, 255)
+            hl.OutlineColor = Color3.fromRGB(220, 100, 255)
+            hl.FillTransparency = 0.1
+            hl.OutlineTransparency = 0
+            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            hl.Parent = char
+
+            local sound = Instance.new("Sound")
+            sound.SoundId = "rbxassetid://2814442547"
+            sound.Volume = 3
+            sound.Parent = targetPart
+            sound:Play()
+
+            task.wait(0.5)
+            pe.Enabled = false
+            TweenService:Create(hl, TweenInfo.new(0.3), {FillTransparency = 1, OutlineTransparency = 1}):Play()
+            
+            task.wait(0.5)
+            pe:Destroy()
+            hl:Destroy()
+            sound:Destroy()
+        end)
+    end
+end
+
+local function spawnVerticalVoidPortal(position)
     task.spawn(function()
         local portal = Instance.new("Part")
         portal.Name = "WangLinPortal"
         portal.Size = Vector3.new(0.2, 1, 1)
         
-        portal.CFrame = cframe * CFrame.Angles(0, math.rad(90), 0)
+        portal.CFrame = CFrame.new(position) * CFrame.Angles(math.rad(90), 0, 0)
         
         portal.Anchored = true
         portal.CanCollide = false
@@ -1143,7 +1203,7 @@ local function spawnVoidPortal(cframe)
         local spinConnection
         spinConnection = RunService.RenderStepped:Connect(function()
             if portal and portal.Parent then
-                portal.CFrame = portal.CFrame * CFrame.Angles(0.08, 0, 0)
+                portal.CFrame = portal.CFrame * CFrame.Angles(0, 0.08, 0)
             else
                 spinConnection:Disconnect()
             end
@@ -1183,25 +1243,24 @@ local function performPortalWarp()
     if hrp and humanoid and humanoid.Health > 0 then
         lastWarpTime = tick()
 
-        local startCFrame = hrp.CFrame
+        local startPos = hrp.Position
         local targetPos = Mouse.Hit.Position
 
-        local distance = (targetPos - startCFrame.Position).Magnitude
+        local distance = (targetPos - startPos).Magnitude
         if distance > maxMouseDistance then
-            local direction = (targetPos - startCFrame.Position).Unit
-            targetPos = startCFrame.Position + (direction * maxMouseDistance)
+            local direction = (targetPos - startPos).Unit
+            targetPos = startPos + (direction * maxMouseDistance)
         end
 
         local endCFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0), targetPos + hrp.CFrame.LookVector)
 
-        spawnVoidPortal(startCFrame)
+        createFEReplicatedEffect(char)
 
-        spawnVoidPortal(endCFrame)
+        spawnVerticalVoidPortal(startPos)
+        spawnVerticalVoidPortal(targetPos + Vector3.new(0, 3, 0))
 
         preventRagdoll(humanoid, hrp)
-
         hrp.CFrame = endCFrame
-
         preventRagdoll(humanoid, hrp)
     end
 end
