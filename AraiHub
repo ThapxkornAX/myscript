@@ -1,8 +1,13 @@
 local GameScripts = {
     [128736949265057] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/gakuran",
 
-    [81864505280935] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper"
-    [122446657157717] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper"
+    [81864505280935] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper",
+    [122446657157717] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper",
+    [126042865144779] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper",
+    [115517196855730] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper",
+    [97351083183660] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper",
+    [114302148100793] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper",
+    [90165746516953] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper",
     
     
     [2753915549] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/bloxfruit",
