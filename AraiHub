@@ -3,7 +3,6 @@ local GameScripts = {
 
     [81864505280935] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper"
     
-    -- Blox Fruits (ใส่ได้ทั้ง GameID และ PlaceID ของทุก Sea)
     [2753915549] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/bloxfruit",
     [4442272183] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/bloxfruit",
     [7449423635] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/bloxfruit",
