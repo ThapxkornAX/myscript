@@ -367,13 +367,13 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.E then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         HoldingLMB = true
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.E then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         HoldingLMB = false
     end
 end)
