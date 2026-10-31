@@ -1,0 +1,486 @@
+if getgenv and getgenv().AutoRepairCleanup then
+    pcall(getgenv().AutoRepairCleanup)
+end
+
+local cleanupData = {
+    Connections = {},
+    Threads = {},
+    OriginalHook = nil,
+    OldNamecall = nil,
+    ESPObjects = {},
+    GenESPObjects = {}
+}
+
+local function cleanup()
+    for _, th in ipairs(cleanupData.Threads) do
+        if th and coroutine.status(th) ~= "dead" then
+            task.cancel(th)
+        end
+    end
+    table.clear(cleanupData.Threads)
+
+    for _, conn in ipairs(cleanupData.Connections) do
+        if conn and typeof(conn) == "RBXScriptConnection" and conn.Connected then
+            conn:Disconnect()
+        end
+    end
+    table.clear(cleanupData.Connections)
+
+    for _, obj in ipairs(cleanupData.ESPObjects) do
+        if obj and obj.Parent then
+            obj:Destroy()
+        end
+    end
+    table.clear(cleanupData.ESPObjects)
+
+    for _, obj in ipairs(cleanupData.GenESPObjects) do
+        if obj and obj.Parent then
+            obj:Destroy()
+        end
+    end
+    table.clear(cleanupData.GenESPObjects)
+
+    if cleanupData.OriginalHook and cleanupData.OldNamecall then
+        pcall(function()
+            hookmetamethod(game, "__namecall", cleanupData.OldNamecall)
+        end)
+    end
+
+    local character = game:GetService("Players").LocalPlayer.Character
+    if character and character:FindFirstChildOfClass("Humanoid") then
+        character:FindFirstChildOfClass("Humanoid").PlatformStand = false
+    end
+
+    print("[Auto-Gen] ล้างระบบเก่าเรียบร้อย")
+end
+
+if getgenv then
+    getgenv().AutoRepairCleanup = cleanup
+end
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local GeneratorRemotes = Remotes:WaitForChild("Generator")
+local RepairEvent = GeneratorRemotes:WaitForChild("RepairEvent")
+local SkillCheckEvent = GeneratorRemotes:WaitForChild("SkillCheckResultEvent")
+
+local isRepairing = false
+local currentPoint = nil
+local sessionUUID = nil
+local cancelCooldown = false
+local isPlayerESPEnabled = true
+local isGenESPEnabled = true
+local repairLoopThread = nil
+
+local function isKiller(player)
+    player = player or LocalPlayer
+    if player.Team then
+        return player.Team.Name:lower():find("killer") ~= nil
+    end
+    return false
+end
+
+if hookmetamethod then
+    local originalNamecall
+    originalNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local args = {...}
+        local method = getnamecallmethod()
+
+        if self == SkillCheckEvent and method == "FireServer" and not isKiller(LocalPlayer) then
+            args[1] = "success"
+            args[2] = 1
+            return originalNamecall(self, unpack(args))
+        end
+
+        return originalNamecall(self, ...)
+    end))
+
+    cleanupData.OriginalHook = true
+    cleanupData.OldNamecall = originalNamecall
+end
+
+local function getClosestGeneratorPoint()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = character.HumanoidRootPart.Position
+
+    local closestPoint = nil
+    local minDistance = 14
+
+    for _, desc in ipairs(workspace:GetDescendants()) do
+        if desc:IsA("BasePart") and desc.Name:find("GeneratorPoint") then
+            local genModel = desc:FindFirstAncestorWhichIsA("Model")
+            local isDone = genModel and (genModel:GetAttribute("Completed") == true or (genModel:GetAttribute("RepairProgress") or 0) >= 100)
+            if not isDone then
+                local dist = (desc.Position - myPos).Magnitude
+                if dist < minDistance then
+                    minDistance = dist
+                    closestPoint = desc
+                end
+            end
+        end
+    end
+
+    return closestPoint
+end
+
+local function stopRepair()
+    isRepairing = false
+    if repairLoopThread then
+        task.cancel(repairLoopThread)
+        repairLoopThread = nil
+    end
+
+    if currentPoint and sessionUUID then
+        local character = LocalPlayer.Character
+        RepairEvent:FireServer(
+            currentPoint,
+            false,
+            nil,
+            sessionUUID,
+            character
+        )
+        print("[Auto-Gen] ปล่อยมือออกจากเครื่องปั่นไฟ")
+    end
+    currentPoint = nil
+    sessionUUID = nil
+end
+
+local function startRepairLoop(targetPoint)
+    if isRepairing then return end
+    currentPoint = targetPoint
+    sessionUUID = HttpService:GenerateGUID(false)
+    isRepairing = true
+    print("[Auto-Gen] ตรวจพบการคลิก เริ่มต้นซ่อมค้างที่: " .. targetPoint:GetFullName())
+
+    repairLoopThread = task.spawn(function()
+        while isRepairing do
+            if isKiller(LocalPlayer) or cancelCooldown then
+                stopRepair()
+                break
+            end
+
+            local character = LocalPlayer.Character
+            local myHrp = character and character:FindFirstChild("HumanoidRootPart")
+
+            if myHrp and currentPoint then
+                local dist = (currentPoint.Position - myHrp.Position).Magnitude
+                if dist > 15 then
+                    stopRepair()
+                    break
+                end
+
+                local genModel = currentPoint:FindFirstAncestorWhichIsA("Model")
+                if genModel and (genModel:GetAttribute("Completed") == true or (genModel:GetAttribute("RepairProgress") or 0) >= 100) then
+                    print("[Auto-Gen] เครื่องปั่นไฟนี้ซ่อมเสร็จสมบูรณ์แล้ว")
+                    stopRepair()
+                    break
+                end
+
+                RepairEvent:FireServer(
+                    currentPoint,
+                    true,
+                    nil,
+                    sessionUUID,
+                    character
+                )
+            else
+                stopRepair()
+                break
+            end
+            task.wait(0.2)
+        end
+    end)
+    table.insert(cleanupData.Threads, repairLoopThread)
+end
+
+local clickConn = UserInputService.InputBegan:Connect(function(input, gpe)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if not isKiller(LocalPlayer) and not cancelCooldown and not isRepairing then
+            local target = getClosestGeneratorPoint()
+            if target then
+                startRepairLoop(target)
+            end
+        end
+    end
+end)
+table.insert(cleanupData.Connections, clickConn)
+
+local espTracks = {}
+
+local function applyPlayerESP(player)
+    if player == LocalPlayer then return end
+
+    local function setupChar(char)
+        if not char then return end
+        local hrp = char:WaitForChild("HumanoidRootPart", 5)
+        local head = char:WaitForChild("Head", 5)
+        if not hrp or not head then return end
+
+        local oldHl = char:FindFirstChild("ESPHighlight")
+        if oldHl then oldHl:Destroy() end
+        local oldBb = head:FindFirstChild("ESPTag")
+        if oldBb then oldBb:Destroy() end
+
+        local hl = Instance.new("Highlight")
+        hl.Name = "ESPHighlight"
+        hl.FillTransparency = 0.5
+        hl.OutlineTransparency = 0
+        hl.Adornee = char
+        hl.Parent = char
+        table.insert(cleanupData.ESPObjects, hl)
+
+        local bb = Instance.new("BillboardGui")
+        bb.Name = "ESPTag"
+        bb.Size = UDim2.new(0, 160, 0, 45)
+        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+        bb.AlwaysOnTop = true
+        bb.Adornee = head
+        bb.Parent = head
+        table.insert(cleanupData.ESPObjects, bb)
+
+        local tagLabel = Instance.new("TextLabel")
+        tagLabel.Size = UDim2.new(1, 0, 1, 0)
+        tagLabel.BackgroundTransparency = 1
+        tagLabel.Font = Enum.Font.GothamBold
+        tagLabel.TextSize = 12
+        tagLabel.TextStrokeTransparency = 0
+        tagLabel.Parent = bb
+
+        espTracks[player] = {
+            Character = char,
+            Highlight = hl,
+            Billboard = bb,
+            Label = tagLabel
+        }
+    end
+
+    if player.Character then
+        task.spawn(setupChar, player.Character)
+    end
+    local charAddedConn = player.CharacterAdded:Connect(setupChar)
+    table.insert(cleanupData.Connections, charAddedConn)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    applyPlayerESP(p)
+end
+local plrAddedConn = Players.PlayerAdded:Connect(applyPlayerESP)
+table.insert(cleanupData.Connections, plrAddedConn)
+
+local plrRemovingConn = Players.PlayerRemoving:Connect(function(p)
+    espTracks[p] = nil
+end)
+table.insert(cleanupData.Connections, plrRemovingConn)
+
+local playerEspThread = task.spawn(function()
+    while true do
+        task.wait(0.1)
+        local myChar = LocalPlayer.Character
+        local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        local amIKiller = isKiller(LocalPlayer)
+
+        for player, data in pairs(espTracks) do
+            if data.Character and data.Character.Parent and data.Highlight and data.Label then
+                local targetHrp = data.Character:FindFirstChild("HumanoidRootPart")
+                local targetIsKiller = isKiller(player)
+
+                local shouldShow = false
+                if isPlayerESPEnabled then
+                    if not amIKiller and targetIsKiller then
+                        shouldShow = true
+                    elseif amIKiller and not targetIsKiller then
+                        shouldShow = true
+                    end
+                end
+
+                if shouldShow and myHrp and targetHrp then
+                    data.Highlight.Enabled = true
+                    data.Billboard.Enabled = true
+
+                    local distance = math.floor((targetHrp.Position - myHrp.Position).Magnitude)
+                    local roleName = (player.Team and player.Team.Name) or (targetIsKiller and "Killer" or "Survivor")
+                    local teamColor = targetIsKiller and Color3.fromRGB(255, 60, 60) or Color3.fromRGB(60, 160, 255)
+
+                    data.Highlight.FillColor = teamColor
+                    data.Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+
+                    data.Label.TextColor3 = teamColor
+                    data.Label.Text = string.format("%s\n[%s] [%dm]", player.DisplayName, roleName, distance)
+                else
+                    data.Highlight.Enabled = false
+                    data.Billboard.Enabled = false
+                end
+            end
+        end
+    end
+end)
+table.insert(cleanupData.Threads, playerEspThread)
+
+local genTracks = {}
+
+local function setupGenESP(genModel)
+    if genTracks[genModel] then return end
+
+    local primaryPart = genModel.PrimaryPart or genModel:FindFirstChild("RootPart") or genModel:FindFirstChildWhichIsA("BasePart")
+    if not primaryPart then return end
+
+    local hl = Instance.new("Highlight")
+    hl.Name = "GenHighlight"
+    hl.FillColor = Color3.fromRGB(255, 200, 50)
+    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+    hl.FillTransparency = 0.6
+    hl.OutlineTransparency = 0
+    hl.Adornee = genModel
+    hl.Parent = genModel
+    table.insert(cleanupData.GenESPObjects, hl)
+
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "GenTag"
+    bb.Size = UDim2.new(0, 150, 0, 40)
+    bb.StudsOffset = Vector3.new(0, 3.5, 0)
+    bb.AlwaysOnTop = true
+    bb.Adornee = primaryPart
+    bb.Parent = primaryPart
+    table.insert(cleanupData.GenESPObjects, bb)
+
+    local tagLabel = Instance.new("TextLabel")
+    tagLabel.Size = UDim2.new(1, 0, 1, 0)
+    tagLabel.BackgroundTransparency = 1
+    tagLabel.Font = Enum.Font.GothamBold
+    tagLabel.TextSize = 12
+    tagLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+    tagLabel.TextStrokeTransparency = 0
+    tagLabel.Parent = bb
+
+    genTracks[genModel] = {
+        Model = genModel,
+        Part = primaryPart,
+        Highlight = hl,
+        Billboard = bb,
+        Label = tagLabel
+    }
+end
+
+local function scanGenerators()
+    local genFolder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Generators")
+    if genFolder then
+        for _, gen in ipairs(genFolder:GetChildren()) do
+            if gen:IsA("Model") then
+                setupGenESP(gen)
+            end
+        end
+    else
+        for _, desc in ipairs(workspace:GetDescendants()) do
+            if desc:IsA("Model") and desc.Name == "Generator" and desc:FindFirstChild("RootPart") then
+                setupGenESP(desc)
+            end
+        end
+    end
+end
+
+scanGenerators()
+
+local mapFolder = workspace:FindFirstChild("Map")
+if mapFolder then
+    local genFolderConn = mapFolder.DescendantAdded:Connect(function(desc)
+        if desc:IsA("Model") and (desc.Name == "Generator" or desc.Parent.Name == "Generators") then
+            task.wait(0.5)
+            setupGenESP(desc)
+        end
+    end)
+    table.insert(cleanupData.Connections, genFolderConn)
+end
+
+local genEspThread = task.spawn(function()
+    while true do
+        task.wait(0.15)
+        local myChar = LocalPlayer.Character
+        local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        local amIKiller = isKiller(LocalPlayer)
+
+        local canShowGen = isGenESPEnabled and not amIKiller
+
+        for genModel, data in pairs(genTracks) do
+            if data.Model and data.Model.Parent and data.Part and data.Highlight and data.Label then
+                local isCompleted = data.Model:GetAttribute("Completed") == true
+                local progress = data.Model:GetAttribute("RepairProgress") or 0
+
+                if isCompleted or progress >= 100 then
+                    data.Highlight.Enabled = false
+                    data.Billboard.Enabled = false
+                elseif canShowGen and myHrp then
+                    data.Highlight.Enabled = true
+                    data.Billboard.Enabled = true
+
+                    local distance = math.floor((data.Part.Position - myHrp.Position).Magnitude)
+                    data.Label.Text = string.format("⚡ Generator (%d%%)\n[%dm]", math.floor(progress), distance)
+                else
+                    data.Highlight.Enabled = false
+                    data.Billboard.Enabled = false
+                end
+            else
+                genTracks[genModel] = nil
+            end
+        end
+    end
+end)
+table.insert(cleanupData.Threads, genEspThread)
+
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/myguikub"))()
+local MainTab = Library:AddTab("Main", "👤")
+
+pcall(function()
+    MainTab:AddUserProfile()
+end)
+
+task.spawn(function()
+    task.wait(0.2)
+    local CoreGui = game:GetService("CoreGui")
+    local targetGuis = { (gethui and gethui()), CoreGui:FindFirstChild("RobloxGui"), CoreGui, LocalPlayer:FindFirstChild("PlayerGui") }
+    for _, container in ipairs(targetGuis) do
+        if container then
+            for _, desc in ipairs(container:GetDescendants()) do
+                if desc:IsA("TextLabel") and desc.Text:find("Level:") then
+                    desc.Text = desc.Text:gsub("%s*|%s*Level:%s*%d+", "")
+                end
+            end
+        end
+    end
+end)
+
+local playerEspToggle
+playerEspToggle = MainTab:AddToggle("Player ESP", true, function(Value)
+    isPlayerESPEnabled = Value
+end)
+
+local genEspToggle
+genEspToggle = MainTab:AddToggle("Generator ESP", true, function(Value)
+    isGenESPEnabled = Value
+end)
+
+local keyConn = UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.V then
+        if isRepairing then
+            stopRepair()
+            cancelCooldown = true
+            print("[Auto-Gen] ออกจากเครื่องปั่นไฟแล้ว (หน่วง 2 วิ)")
+            task.delay(2, function()
+                cancelCooldown = false
+            end)
+        end
+    end
+end)
+table.insert(cleanupData.Connections, keyConn)
+
+local teamConn = LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
+    if isKiller(LocalPlayer) and isRepairing then
+        stopRepair()
+    end
+end)
+table.insert(cleanupData.Connections, teamConn)
