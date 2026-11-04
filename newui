@@ -99,6 +99,7 @@ function Library:CreateWindow(config)
         isVisible = false
         MainFrame.Visible = false
     end)
+
     UserInputService.InputBegan:Connect(function(input, gpe)
         if not gpe and input.KeyCode == ToggleKey then
             isVisible = not isVisible
@@ -130,6 +131,10 @@ function Library:CreateWindow(config)
     ContentArea.Parent = MainFrame
 
     local WindowHandler = {Tabs = {}, First = true}
+
+    function WindowHandler:SetToggleKey(newKey)
+        ToggleKey = newKey
+    end
 
     function WindowHandler:CreateTab(tabName)
         local TabBtn = Instance.new("TextButton")
@@ -258,6 +263,64 @@ function Library:CreateWindow(config)
                 TweenService:Create(tbtn, TweenInfo.new(0.18), {BackgroundColor3 = state and Color3.fromRGB(60, 120, 255) or Color3.fromRGB(40, 42, 50)}):Play()
                 TweenService:Create(knob, TweenInfo.new(0.18), {Position = state and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)}):Play()
                 pcall(callback, state)
+            end)
+        end
+
+        function TabElements:AddKeybind(text, defaultKey, callback)
+            local currentKey = defaultKey or Enum.KeyCode.RightControl
+            local listening = false
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, 0, 0, 34)
+            frame.BackgroundColor3 = Color3.fromRGB(26, 27, 32)
+            frame.Parent = Page
+
+            local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 6) corner.Parent = frame
+            local stroke = Instance.new("UIStroke") stroke.Color = Color3.fromRGB(38, 40, 48) stroke.Parent = frame
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, -100, 1, 0)
+            label.Position = UDim2.new(0, 10, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Font = Enum.Font.GothamMedium
+            label.Text = text
+            label.TextColor3 = Color3.fromRGB(220, 222, 230)
+            label.TextSize = 12
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = frame
+
+            local keyBtn = Instance.new("TextButton")
+            keyBtn.Size = UDim2.new(0, 75, 0, 22)
+            keyBtn.Position = UDim2.new(1, -85, 0.5, -11)
+            keyBtn.BackgroundColor3 = Color3.fromRGB(36, 38, 46)
+            keyBtn.AutoButtonColor = false
+            keyBtn.Font = Enum.Font.GothamBold
+            keyBtn.Text = currentKey.Name
+            keyBtn.TextColor3 = Color3.fromRGB(180, 185, 200)
+            keyBtn.TextSize = 11
+            keyBtn.Parent = frame
+
+            local kcorner = Instance.new("UICorner") kcorner.CornerRadius = UDim.new(0, 5) kcorner.Parent = keyBtn
+            local kstroke = Instance.new("UIStroke") kstroke.Color = Color3.fromRGB(50, 53, 64) kstroke.Parent = keyBtn
+
+            keyBtn.MouseButton1Click:Connect(function()
+                if not listening then
+                    listening = true
+                    keyBtn.Text = "..."
+                    keyBtn.TextColor3 = Color3.fromRGB(60, 120, 255)
+                    TweenService:Create(kstroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(60, 120, 255)}):Play()
+                end
+            end)
+
+            UserInputService.InputBegan:Connect(function(input, gpe)
+                if listening and input.UserInputType == Enum.UserInputType.Keyboard then
+                    listening = false
+                    currentKey = input.KeyCode
+                    keyBtn.Text = currentKey.Name
+                    keyBtn.TextColor3 = Color3.fromRGB(180, 185, 200)
+                    TweenService:Create(kstroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(50, 53, 64)}):Play()
+                    pcall(callback, currentKey)
+                end
             end)
         end
 
