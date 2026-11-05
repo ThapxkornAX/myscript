@@ -374,7 +374,7 @@ RunService.Heartbeat:Connect(function()
 end)
 
 local Window = Library:CreateWindow({
-    Title = "PEDZ HUB | FIXED AUTO PARRY",
+    Title = "Arai Hub | ISHIN",
     ToggleKey = Enum.KeyCode.RightControl
 })
 
