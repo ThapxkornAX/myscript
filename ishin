@@ -1,0 +1,433 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/newui"))()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local root = char:WaitForChild("HumanoidRootPart")
+local hum = char:WaitForChild("Humanoid")
+
+player.CharacterAdded:Connect(function(newChar)
+    char = newChar
+    root = newChar:WaitForChild("HumanoidRootPart")
+    hum = newChar:WaitForChild("Humanoid")
+end)
+
+local CombatAttackPaths = {
+    ["DefaultPunch1"] = { Impact = 0.38 },
+    ["DefaultPunch2"] = { Impact = 0.38 },
+    ["DefaultPunch3"] = { Impact = 0.38 },
+    ["DefaultPunch4"] = { Impact = 0.40 },
+    ["DefaultCritical"] = { Impact = 0.65 },
+
+    ["KendoPunch1"] = { Impact = 0.38 },
+    ["KendoPunch2"] = { Impact = 0.38 },
+    ["KendoPunch3"] = { Impact = 0.38 },
+    ["KendoPunch4"] = { Impact = 0.40 },
+    ["KendoCritical"] = { Impact = 0.65 },
+    ["DumbKendoPunch1"] = { Impact = 0.38 },
+    ["DumbKendoPunch2"] = { Impact = 0.38 },
+    ["DumbKendoPunch3"] = { Impact = 0.38 },
+    ["DumbKendoPunch4"] = { Impact = 0.40 },
+
+    ["BoxingPunch1"] = { Impact = 0.32 },
+    ["BoxingPunch2"] = { Impact = 0.32 },
+    ["BoxingPunch3"] = { Impact = 0.34 },
+    ["BoxingPunch4"] = { Impact = 0.36 },
+    ["BoxingCritical"] = { Impact = 0.65 },
+
+    ["Muay ThaiPunch1"] = { Impact = 0.32 },
+    ["Muay ThaiPunch2"] = { Impact = 0.32 },
+    ["Muay ThaiPunch3"] = { Impact = 0.34 },
+    ["Muay ThaiPunch4"] = { Impact = 0.36 },
+    ["Muay ThaiCritical"] = { Impact = 0.68 },
+
+    ["TaekwondoKick1"] = { Impact = 0.32 },
+    ["TaekwondoKick2"] = { Impact = 0.34 },
+    ["TaekwondoKick3"] = { Impact = 0.34 },
+    ["TaekwondoKick4"] = { Impact = 0.36 },
+    ["TaekwondoCritical"] = { Impact = 0.68 },
+
+    ["KaratePunch1"] = { Impact = 0.34 },
+    ["KaratePunch2"] = { Impact = 0.34 },
+    ["KaratePunch3"] = { Impact = 0.34 },
+    ["KaratePunch4"] = { Impact = 0.36 },
+    ["KarateCritical"] = { Impact = 0.65 },
+
+    ["DestroyerPunch1"] = { Impact = 0.34 },
+    ["DestroyerCriticalUser"] = { Impact = 0.65 },
+    ["AikidoPunch1"] = { Impact = 0.34 },
+    ["AikidoCriticalUser"] = { Impact = 0.65 },
+    ["SeraphPunch1"] = { Impact = 0.34 },
+    ["SeraphBigWaveUser"] = { Impact = 0.68 },
+    ["VampirePunch1"] = { Impact = 0.34 },
+    ["VampireCriticalUserFront"] = { Impact = 0.65 },
+    ["WrestlingPunch1"] = { Impact = 0.36 },
+    ["WrestlingCriticalUser"] = { Impact = 0.60 },
+    ["NekoashiPunch1"] = { Impact = 0.34 },
+    ["NekoashiCritical"] = { Impact = 0.65 }
+}
+
+local IdToAttackName = {
+    ["99810130553480"] = "DefaultPunch1",
+    ["108741734899896"] = "DefaultPunch2",
+    ["131420553411309"] = "DefaultPunch3",
+    ["128344453267222"] = "DefaultPunch4",
+    ["125013954493950"] = "DefaultCritical",
+    ["138879764141061"] = "KendoPunch1",
+    ["88933140898192"] = "KendoPunch2",
+    ["115475660627075"] = "KendoPunch3",
+    ["140021888835093"] = "KendoPunch4",
+    ["71126000171857"] = "KendoCritical",
+    ["137310197834317"] = "BoxingPunch1",
+    ["81018814153053"] = "BoxingPunch2",
+    ["136727367324331"] = "BoxingPunch3",
+    ["139555106880218"] = "BoxingPunch4",
+    ["121790793420904"] = "BoxingCritical",
+    ["103227008734052"] = "Muay ThaiPunch1",
+    ["121211513408313"] = "Muay ThaiPunch2",
+    ["95850588860107"] = "Muay ThaiPunch3",
+    ["79314857575496"] = "Muay ThaiPunch4",
+    ["108091829729254"] = "Muay ThaiCritical",
+    ["71285630391939"] = "TaekwondoKick1",
+    ["132045283439505"] = "TaekwondoKick2",
+    ["137265538892519"] = "TaekwondoKick3",
+    ["76773915673575"] = "TaekwondoKick4",
+    ["114511086970158"] = "TaekwondoCritical"
+}
+
+local Config = {
+    Enabled = true,
+    Distance = 7.5,
+    Angle = 180,
+    ShowVisualZone = true,
+    Cooldown = 0.32,
+    PreImpactTime = 0.05,
+    CriticalDelay = 0.58
+}
+
+local VisualFolder = Workspace:FindFirstChild("Pedz_ParryVisualFolder") or Instance.new("Folder")
+VisualFolder.Name = "Pedz_ParryVisualFolder"
+VisualFolder.Parent = Workspace
+
+local function clearVisualZone()
+    VisualFolder:ClearAllChildren()
+end
+
+local function updateVisualZone()
+    clearVisualZone()
+    if not (Config.Enabled and Config.ShowVisualZone and root) then return end
+
+    local r = Config.Distance
+    local angle = Config.Angle
+
+    if angle == 360 then
+        local circle = Instance.new("Part")
+        circle.Name = "Zone_360"
+        circle.Shape = Enum.PartType.Cylinder
+        circle.Size = Vector3.new(0.05, r * 2, r * 2)
+        circle.Color = Color3.fromRGB(255, 30, 30)
+        circle.Material = Enum.Material.Neon
+        circle.Transparency = 0.72
+        circle.CanCollide = false
+        circle.CanQuery = false
+        circle.CanTouch = false
+        circle.CastShadow = false
+        circle.Parent = VisualFolder
+
+        local weld = Instance.new("WeldConstraint")
+        circle.CFrame = root.CFrame * CFrame.new(0, -2.85, 0) * CFrame.Angles(0, 0, math.rad(90))
+        weld.Part0 = root
+        weld.Part1 = circle
+        weld.Parent = circle
+    else
+        local segments = (angle == 180) and 14 or 8
+        local startAngle = -angle / 2
+        local step = angle / segments
+
+        for i = 0, segments - 1 do
+            local a1 = math.rad(startAngle + (i * step))
+            local a2 = math.rad(startAngle + ((i + 1) * step))
+
+            local p1 = Vector3.new(math.sin(a1) * r, 0, -math.cos(a1) * r)
+            local p2 = Vector3.new(math.sin(a2) * r, 0, -math.cos(a2) * r)
+            local center = (p1 + p2) / 2
+
+            local wedge = Instance.new("Part")
+            wedge.Name = "Zone_Sector_" .. i
+            wedge.Size = Vector3.new((p2 - p1).Magnitude, 0.05, r)
+            wedge.Color = Color3.fromRGB(255, 30, 30)
+            wedge.Material = Enum.Material.Neon
+            wedge.Transparency = 0.7
+            wedge.CanCollide = false
+            wedge.CanQuery = false
+            wedge.CanTouch = false
+            wedge.CastShadow = false
+            wedge.Parent = VisualFolder
+
+            local weld = Instance.new("WeldConstraint")
+            wedge.CFrame = root.CFrame * CFrame.new(center.X / 2, -2.85, center.Z / 2) * CFrame.Angles(0, math.atan2(center.X, -center.Z), 0)
+            weld.Part0 = root
+            weld.Part1 = wedge
+            weld.Parent = wedge
+        end
+    end
+end
+
+local isParrying = false
+local lastParryTime = 0
+local processedTracks = setmetatable({}, { __mode = "k" })
+local activeCriticalChars = {}
+
+local function executeSingleParry()
+    local now = tick()
+    if isParrying or (now - lastParryTime) < Config.Cooldown then return end
+    isParrying = true
+    lastParryTime = now
+
+    task.spawn(function()
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+        task.wait(0.04)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+        isParrying = false
+    end)
+end
+
+local function getAngleThreshold()
+    if Config.Angle == 360 then
+        return -1.0
+    elseif Config.Angle == 180 then
+        return 0.05
+    elseif Config.Angle == 90 then
+        return 0.707
+    end
+    return 0.05
+end
+
+local function isEnemyTargetingMe(enemyChar)
+    if not root or not hum or hum.Health <= 0 then return false end
+    local eRoot = enemyChar:FindFirstChild("HumanoidRootPart")
+    if not eRoot then return false end
+
+    local myPos = root.Position
+    local toEnemy = (eRoot.Position - myPos)
+    local dist = toEnemy.Magnitude
+
+    if dist <= Config.Distance then
+        local myForward = root.CFrame.LookVector
+        local dirToEnemy = toEnemy.Unit
+        local angleThreshold = getAngleThreshold()
+
+        local inAngle = (Config.Angle == 360) or (myForward:Dot(dirToEnemy) >= angleThreshold)
+        local enemyFacingMe = eRoot.CFrame.LookVector:Dot(-dirToEnemy) > 0.15
+
+        return inAngle and enemyFacingMe
+    end
+    return false
+end
+
+local function handleCriticalAdded(enemyChar, child)
+    if child.Name == "_H_Critical" or child.Name:find("Critical") then
+        activeCriticalChars[enemyChar] = tick()
+
+        task.delay(Config.CriticalDelay, function()
+            activeCriticalChars[enemyChar] = nil
+            if not Config.Enabled or isParrying then return end
+            if isEnemyTargetingMe(enemyChar) then
+                executeSingleParry()
+            end
+        end)
+    end
+end
+
+local function getAttackData(track)
+    local animObj = track.Animation
+    if animObj then
+        local animId = animObj.AnimationId
+        local numId = animId:match("%d+")
+        if numId and IdToAttackName[numId] then
+            local attackName = IdToAttackName[numId]
+            if CombatAttackPaths[attackName] then
+                return CombatAttackPaths[attackName]
+            end
+        end
+    end
+
+    local trackName = track.Name
+    if CombatAttackPaths[trackName] then
+        return CombatAttackPaths[trackName]
+    end
+
+    local lowerName = string.lower(trackName)
+    local isNonCombat = lowerName:find("idle") or lowerName:find("walk") or lowerName:find("run") 
+        or lowerName:find("sprint") or lowerName:find("jump") or lowerName:find("fall") 
+        or lowerName:find("land") or lowerName:find("sit") or lowerName:find("dance") 
+        or lowerName:find("emote") or lowerName:find("weave") or lowerName:find("stance") 
+        or lowerName:find("block") or lowerName:find("hit")
+
+    if not isNonCombat then
+        if lowerName:find("critical") or lowerName:find("heavy") or lowerName:find("crit") then
+            local dur = (track.Length > 0) and track.Length or 1.1
+            return { Impact = dur * 0.62 }
+        elseif lowerName:find("punch") or lowerName:find("kick") or lowerName:find("wave") or lowerName:find("attack") or lowerName:find("strike") or lowerName:find("slash") or lowerName:find("swing") then
+            local dur = (track.Length > 0) and track.Length or 0.8
+            return { Impact = dur * 0.38 }
+        end
+    end
+
+    return nil
+end
+
+local function handleAttackTrack(enemyChar, track)
+    if processedTracks[track] then return end
+    if activeCriticalChars[enemyChar] then return end
+
+    local attackData = getAttackData(track)
+    if not attackData then return end
+
+    local speed = (track.Speed > 0) and track.Speed or 1
+    local currentPos = track.TimePosition
+    local impactPoint = attackData.Impact
+    local triggerPoint = math.max(0, impactPoint - Config.PreImpactTime)
+    local delayTime = math.max(0, (triggerPoint - currentPos) / speed)
+
+    task.delay(delayTime, function()
+        if not Config.Enabled or isParrying or not root or not hum or hum.Health <= 0 then return end
+        if processedTracks[track] or not track.IsPlaying then return end
+
+        if isEnemyTargetingMe(enemyChar) then
+            processedTracks[track] = true
+            executeSingleParry()
+        end
+    end)
+end
+
+local trackedAnimators = {}
+local hookedCharacters = {}
+
+local function setupCharacterHook(targetModel)
+    if targetModel == char or hookedCharacters[targetModel] then return end
+    hookedCharacters[targetModel] = true
+
+    local eHum = targetModel:FindFirstChildOfClass("Humanoid")
+    local eAnimator = eHum and eHum:FindFirstChildOfClass("Animator")
+
+    if eAnimator and not trackedAnimators[eAnimator] then
+        trackedAnimators[eAnimator] = true
+        eAnimator.AnimationPlayed:Connect(function(track)
+            handleAttackTrack(targetModel, track)
+        end)
+    end
+
+    targetModel.ChildAdded:Connect(function(child)
+        handleCriticalAdded(targetModel, child)
+    end)
+
+    local existingCrit = targetModel:FindFirstChild("_H_Critical")
+    if existingCrit then
+        handleCriticalAdded(targetModel, existingCrit)
+    end
+end
+
+local function scanAllCharacters()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Humanoid") and obj.Parent and obj.Parent ~= char and obj.Parent:IsA("Model") then
+            setupCharacterHook(obj.Parent)
+        end
+    end
+end
+
+scanAllCharacters()
+Workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("Humanoid") and descendant.Parent and descendant.Parent ~= char and descendant.Parent:IsA("Model") then
+        setupCharacterHook(descendant.Parent)
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not Config.Enabled or isParrying or not root or not hum or hum.Health <= 0 then return end
+
+    for anim, _ in pairs(trackedAnimators) do
+        local enemyChar = anim.Parent and anim.Parent.Parent
+        if enemyChar and enemyChar ~= char and enemyChar:IsA("Model") then
+            if not activeCriticalChars[enemyChar] and isEnemyTargetingMe(enemyChar) then
+                for _, track in ipairs(anim:GetPlayingAnimationTracks()) do
+                    if not processedTracks[track] then
+                        local attackData = getAttackData(track)
+                        if attackData and track.Speed > 0 and track.WeightCurrent > 0.15 then
+                            local timePos = track.TimePosition
+                            local impactPoint = attackData.Impact
+                            if timePos >= (impactPoint - Config.PreImpactTime) and timePos <= (impactPoint + 0.10) then
+                                processedTracks[track] = true
+                                executeSingleParry()
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+local Window = Library:CreateWindow({
+    Title = "PEDZ HUB | FIXED AUTO PARRY",
+    ToggleKey = Enum.KeyCode.RightControl
+})
+
+local CombatTab = Window:CreateTab("Auto Parry")
+local SettingsTab = Window:CreateTab("Settings")
+
+CombatTab:AddToggle("Enable Auto Parry (เปิดใช้งาน)", true, function(state)
+    Config.Enabled = state
+    updateVisualZone()
+    if not state then
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+    end
+end)
+
+CombatTab:AddToggle("Show Range Zone (แสดงโซนสีแดงที่พื้น)", true, function(state)
+    Config.ShowVisualZone = state
+    updateVisualZone()
+end)
+
+CombatTab:AddDropdown("Parry Angle (องศาการตรวจจับ)", {
+    "180 Degrees (ด้านหน้า 180°)",
+    "90 Degrees (กรวยแคบ 90°)",
+    "360 Degrees (รอบตัว 360°)"
+}, function(choice)
+    if choice:find("360") then
+        Config.Angle = 360
+    elseif choice:find("90") then
+        Config.Angle = 90
+    else
+        Config.Angle = 180
+    end
+    updateVisualZone()
+end)
+
+CombatTab:AddSlider("Body Distance (studs)", 3, 12, 7.5, function(val)
+    Config.Distance = val
+    updateVisualZone()
+end)
+
+CombatTab:AddSlider("Critical (R) Delay (ms)", 300, 1000, 580, function(val)
+    Config.CriticalDelay = val / 1000
+end)
+
+CombatTab:AddSlider("Pre-Impact Timing (ms)", 10, 150, 50, function(val)
+    Config.PreImpactTime = val / 1000
+end)
+
+CombatTab:AddSlider("Parry Cooldown (ms)", 150, 600, 320, function(val)
+    Config.Cooldown = val / 1000
+end)
+
+SettingsTab:AddKeybind("Toggle UI Keybind", Enum.KeyCode.RightControl, function(newKey)
+    Window:SetToggleKey(newKey)
+end)
+
+task.defer(updateVisualZone)
