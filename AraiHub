@@ -1,6 +1,8 @@
 local GameScripts = {
     [128736949265057] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/gakuran",
 
+    [95132192110941] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/ishin",
+
     [93978595733734] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/VD",
 
     [81864505280935] = "https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/sniper",
