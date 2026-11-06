@@ -1,11 +1,13 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ThapxkornAX/myscript/refs/heads/main/newui"))()
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local PathfindingService = game:GetService("PathfindingService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
+local pgui = player:WaitForChild("PlayerGui")
 local char = player.Character or player.CharacterAdded:Wait()
 local root = char:WaitForChild("HumanoidRootPart")
 local hum = char:WaitForChild("Humanoid")
@@ -16,59 +18,166 @@ player.CharacterAdded:Connect(function(newChar)
     hum = newChar:WaitForChild("Humanoid")
 end)
 
+local FarmConfig = {
+    Enabled = false,
+    ShowPathVisual = true,
+    SelectedJobLocation = "Cafe (ร้านกาแฟ)",
+    HoldDelay = 0.3,
+    SprintSpeed = 26
+}
+
+local ParryConfig = {
+    Enabled = true,
+    Distance = 8.8,
+    Angle = 180,
+    Cooldown = 0.38,
+    PreImpactTime = 0.05,
+    DefaultCriticalDelay = 0.55
+}
+
+local oldVisual = Workspace:FindFirstChild("Pedz_ParryVisualFolder")
+if oldVisual then
+    oldVisual:Destroy()
+end
+
+local CriticalStyleTimings = {
+    ["kendo"] = 0.30,
+    ["dumbkendo"] = 0.30,
+    ["sword"] = 0.30,
+    ["wrestling"] = 0.34,
+    ["pencil"] = 0.36,
+    ["holdingpencil"] = 0.36,
+    ["boxing"] = 0.52,
+    ["default"] = 0.54,
+    ["karate"] = 0.54,
+    ["aikido"] = 0.58,
+    ["vampire"] = 0.58,
+    ["nekoashi"] = 0.58,
+    ["crutches"] = 0.60,
+    ["injuredcrutches"] = 0.60,
+    ["muay thai"] = 0.64,
+    ["muaythai"] = 0.64,
+    ["taekwondo"] = 0.64,
+    ["destroyer"] = 0.64,
+    ["seraph"] = 0.66,
+    ["bigwave"] = 0.66
+}
+
 local CombatAttackPaths = {
+    -- 1. Default
     ["DefaultPunch1"] = { Impact = 0.38 },
     ["DefaultPunch2"] = { Impact = 0.38 },
     ["DefaultPunch3"] = { Impact = 0.38 },
     ["DefaultPunch4"] = { Impact = 0.40 },
-    ["DefaultCritical"] = { Impact = 0.65 },
+    ["DefaultCritical"] = { Impact = 0.55 },
 
-    ["KendoPunch1"] = { Impact = 0.38 },
-    ["KendoPunch2"] = { Impact = 0.38 },
-    ["KendoPunch3"] = { Impact = 0.38 },
-    ["KendoPunch4"] = { Impact = 0.40 },
-    ["KendoCritical"] = { Impact = 0.65 },
-    ["DumbKendoPunch1"] = { Impact = 0.38 },
-    ["DumbKendoPunch2"] = { Impact = 0.38 },
-    ["DumbKendoPunch3"] = { Impact = 0.38 },
-    ["DumbKendoPunch4"] = { Impact = 0.40 },
+    -- 2. Kendo & DumbKendo
+    ["KendoPunch1"] = { Impact = 0.32 },
+    ["KendoPunch2"] = { Impact = 0.32 },
+    ["KendoPunch3"] = { Impact = 0.34 },
+    ["KendoPunch4"] = { Impact = 0.36 },
+    ["KendoCritical"] = { Impact = 0.30 },
+    ["DumbKendoPunch1"] = { Impact = 0.32 },
+    ["DumbKendoPunch2"] = { Impact = 0.32 },
+    ["DumbKendoPunch3"] = { Impact = 0.34 },
+    ["DumbKendoPunch4"] = { Impact = 0.36 },
+    ["DumbKendoCritical"] = { Impact = 0.30 },
+    ["KendoSlash"] = { Impact = 0.30 },
+    ["KendoSwing"] = { Impact = 0.30 },
 
+    -- 3. Boxing
     ["BoxingPunch1"] = { Impact = 0.32 },
     ["BoxingPunch2"] = { Impact = 0.32 },
     ["BoxingPunch3"] = { Impact = 0.34 },
     ["BoxingPunch4"] = { Impact = 0.36 },
-    ["BoxingCritical"] = { Impact = 0.65 },
+    ["BoxingCritical"] = { Impact = 0.52 },
+    ["BoxingCounterStart"] = { Impact = 0.30 },
+    ["BoxingCounterEnd"] = { Impact = 0.45 },
 
+    -- 4. Muay Thai
     ["Muay ThaiPunch1"] = { Impact = 0.32 },
     ["Muay ThaiPunch2"] = { Impact = 0.32 },
     ["Muay ThaiPunch3"] = { Impact = 0.34 },
     ["Muay ThaiPunch4"] = { Impact = 0.36 },
-    ["Muay ThaiCritical"] = { Impact = 0.68 },
+    ["Muay ThaiCritical"] = { Impact = 0.64 },
 
+    -- 5. Taekwondo
     ["TaekwondoKick1"] = { Impact = 0.32 },
     ["TaekwondoKick2"] = { Impact = 0.34 },
     ["TaekwondoKick3"] = { Impact = 0.34 },
     ["TaekwondoKick4"] = { Impact = 0.36 },
-    ["TaekwondoCritical"] = { Impact = 0.68 },
+    ["TaekwondoCritical"] = { Impact = 0.64 },
 
+    -- 6. Karate
     ["KaratePunch1"] = { Impact = 0.34 },
     ["KaratePunch2"] = { Impact = 0.34 },
     ["KaratePunch3"] = { Impact = 0.34 },
     ["KaratePunch4"] = { Impact = 0.36 },
-    ["KarateCritical"] = { Impact = 0.65 },
+    ["KarateCritical"] = { Impact = 0.54 },
 
+    -- 7. Destroyer
     ["DestroyerPunch1"] = { Impact = 0.34 },
-    ["DestroyerCriticalUser"] = { Impact = 0.65 },
+    ["DestroyerPunch2"] = { Impact = 0.34 },
+    ["DestroyerPunch3"] = { Impact = 0.34 },
+    ["DestroyerPunch4"] = { Impact = 0.36 },
+    ["DestroyerCriticalStart"] = { Impact = 0.45 },
+    ["DestroyerCriticalUser"] = { Impact = 0.64 },
+    ["DestroyerCounterStart"] = { Impact = 0.30 },
+    ["DestroyerCounterEnd"] = { Impact = 0.45 },
+
+    -- 8. Aikido
     ["AikidoPunch1"] = { Impact = 0.34 },
-    ["AikidoCriticalUser"] = { Impact = 0.65 },
+    ["AikidoPunch2"] = { Impact = 0.34 },
+    ["AikidoPunch3"] = { Impact = 0.34 },
+    ["AikidoPunch4"] = { Impact = 0.36 },
+    ["AikidoCriticalStart"] = { Impact = 0.45 },
+    ["AikidoCriticalUser"] = { Impact = 0.58 },
+
+    -- 9. Seraph
     ["SeraphPunch1"] = { Impact = 0.34 },
-    ["SeraphBigWaveUser"] = { Impact = 0.68 },
+    ["SeraphPunch2"] = { Impact = 0.34 },
+    ["SeraphPunch3"] = { Impact = 0.34 },
+    ["SeraphPunch4"] = { Impact = 0.36 },
+    ["SeraphSmallWave"] = { Impact = 0.42 },
+    ["SeraphBigWaveUser"] = { Impact = 0.66 },
+
+    -- 10. Vampire
     ["VampirePunch1"] = { Impact = 0.34 },
-    ["VampireCriticalUserFront"] = { Impact = 0.65 },
+    ["VampirePunch2"] = { Impact = 0.34 },
+    ["VampirePunch3"] = { Impact = 0.34 },
+    ["VampireCriticalStart"] = { Impact = 0.45 },
+    ["VampireCriticalUserFront"] = { Impact = 0.58 },
+    ["VampireCriticalUserBack"] = { Impact = 0.58 },
+
+    -- 11. Wrestling
     ["WrestlingPunch1"] = { Impact = 0.36 },
-    ["WrestlingCriticalUser"] = { Impact = 0.60 },
+    ["WrestlingPunch2"] = { Impact = 0.36 },
+    ["WrestlingPunch3"] = { Impact = 0.36 },
+    ["WrestlingPunch4"] = { Impact = 0.38 },
+    ["WrestlingCriticalUser"] = { Impact = 0.34 },
+
+    -- 12. Nekoashi
     ["NekoashiPunch1"] = { Impact = 0.34 },
-    ["NekoashiCritical"] = { Impact = 0.65 }
+    ["NekoashiPunch2"] = { Impact = 0.34 },
+    ["NekoashiPunch3"] = { Impact = 0.34 },
+    ["NekoashiPunch4"] = { Impact = 0.36 },
+    ["NekoashiCritical"] = { Impact = 0.58 },
+
+    -- 13. Persona
+    ["PersonaPunch1"] = { Impact = 0.34 },
+    ["PersonaPunch2"] = { Impact = 0.34 },
+    ["PersonaPunch3"] = { Impact = 0.34 },
+    ["PersonaPunch4"] = { Impact = 0.36 },
+
+    -- 14. HoldingPencil
+    ["HoldingPencilPunch1"] = { Impact = 0.32 },
+    ["HoldingPencilPunch2"] = { Impact = 0.32 },
+    ["HoldingPencilCritical"] = { Impact = 0.36 },
+
+    -- 15. InjuredCrutches
+    ["InjuredCrutchesPunch1"] = { Impact = 0.36 },
+    ["InjuredCrutchesPunch2"] = { Impact = 0.36 },
+    ["InjuredCrutchesCritical"] = { Impact = 0.60 }
 }
 
 local IdToAttackName = {
@@ -77,103 +186,105 @@ local IdToAttackName = {
     ["131420553411309"] = "DefaultPunch3",
     ["128344453267222"] = "DefaultPunch4",
     ["125013954493950"] = "DefaultCritical",
+
     ["138879764141061"] = "KendoPunch1",
-    ["88933140898192"] = "KendoPunch2",
+    ["88933140898192"]  = "KendoPunch2",
     ["115475660627075"] = "KendoPunch3",
     ["140021888835093"] = "KendoPunch4",
-    ["71126000171857"] = "KendoCritical",
+    ["71126000171857"]  = "KendoCritical",
+    ["116657713493359"] = "DumbKendoPunch1",
+    ["74164428430876"]  = "DumbKendoPunch2",
+    ["118292765021775"] = "DumbKendoPunch3",
+    ["117921076562321"] = "DumbKendoPunch4",
+
     ["137310197834317"] = "BoxingPunch1",
-    ["81018814153053"] = "BoxingPunch2",
+    ["81018814153053"]  = "BoxingPunch2",
     ["136727367324331"] = "BoxingPunch3",
     ["139555106880218"] = "BoxingPunch4",
     ["121790793420904"] = "BoxingCritical",
+
     ["103227008734052"] = "Muay ThaiPunch1",
     ["121211513408313"] = "Muay ThaiPunch2",
-    ["95850588860107"] = "Muay ThaiPunch3",
-    ["79314857575496"] = "Muay ThaiPunch4",
+    ["95850588860107"]  = "Muay ThaiPunch3",
+    ["79314857575496"]  = "Muay ThaiPunch4",
     ["108091829729254"] = "Muay ThaiCritical",
-    ["71285630391939"] = "TaekwondoKick1",
+
+    ["71285630391939"]  = "TaekwondoKick1",
     ["132045283439505"] = "TaekwondoKick2",
     ["137265538892519"] = "TaekwondoKick3",
-    ["76773915673575"] = "TaekwondoKick4",
-    ["114511086970158"] = "TaekwondoCritical"
+    ["76773915673575"]  = "TaekwondoKick4",
+    ["114511086970158"] = "TaekwondoCritical",
+
+    ["72383368083937"]  = "KaratePunch1",
+    ["101493595766761"] = "KaratePunch2",
+    ["117311833156933"] = "KaratePunch3",
+    ["139818368428134"] = "KaratePunch4",
+    ["138751448642270"] = "KarateCritical",
+
+    ["82972261960857"]  = "DestroyerPunch1",
+    ["116050210527852"] = "DestroyerPunch2",
+    ["76552358251759"]  = "DestroyerPunch3",
+    ["81593782253543"]  = "DestroyerPunch4",
+    ["130297813599495"] = "DestroyerCriticalStart",
+    ["131444620555946"] = "DestroyerCriticalUser",
+
+    ["113408550290116"] = "AikidoPunch1",
+    ["86259504003424"]  = "AikidoPunch2",
+    ["102396666469392"] = "AikidoPunch3",
+    ["120032809599383"] = "AikidoPunch4",
+    ["128003609665979"] = "AikidoCriticalStart",
+    ["93179648846144"]  = "AikidoCriticalUser",
+
+    ["112422547240771"] = "SeraphPunch1",
+    ["89400205607473"]  = "SeraphPunch2",
+    ["135130720655388"] = "SeraphPunch3",
+    ["73133764138366"]  = "SeraphPunch4",
+    ["124334213961477"] = "SeraphSmallWave",
+    ["115226919789581"] = "SeraphBigWaveUser",
+
+    ["108396674048832"] = "VampirePunch1",
+    ["85268909291243"]  = "VampirePunch2",
+    ["77941425490793"]  = "VampirePunch3",
+    ["93714225208571"]  = "VampireCriticalStart",
+    ["95087908252024"]  = "VampireCriticalUserFront",
+    ["114475480311085"] = "VampireCriticalUserBack",
+
+    ["128148706798323"] = "WrestlingPunch1",
+    ["77286017095346"]  = "WrestlingPunch2",
+    ["98630566471996"]  = "WrestlingPunch3",
+    ["117584179802706"] = "WrestlingPunch4",
+    ["133682402797708"] = "WrestlingCriticalUser",
+
+    ["105602418022818"] = "NekoashiPunch1",
+    ["91711407671101"]  = "NekoashiPunch2",
+    ["132891001464508"] = "NekoashiPunch3",
+    ["127566377847523"] = "NekoashiPunch4",
+    ["72093472019378"]  = "NekoashiCritical",
+
+    ["99008972026322"]  = "PersonaPunch1",
+    ["79497497324591"]  = "PersonaPunch2",
+    ["72813108384355"]  = "PersonaPunch3",
+    ["114803516160636"] = "PersonaPunch4",
+
+    ["78572006781458"]  = "HoldingPencilPunch1",
+    ["132998622367902"] = "HoldingPencilPunch2",
+    ["79613782313642"]  = "HoldingPencilCritical",
+
+    ["140330263823298"] = "InjuredCrutchesPunch1",
+    ["117507927339006"] = "InjuredCrutchesPunch2",
+    ["81116685696391"]  = "InjuredCrutchesCritical"
 }
 
-local Config = {
-    Enabled = true,
-    Distance = 7.5,
-    Angle = 180,
-    ShowVisualZone = true,
-    Cooldown = 0.32,
-    PreImpactTime = 0.05,
-    CriticalDelay = 0.58
-}
-
-local VisualFolder = Workspace:FindFirstChild("Pedz_ParryVisualFolder") or Instance.new("Folder")
-VisualFolder.Name = "Pedz_ParryVisualFolder"
-VisualFolder.Parent = Workspace
-
-local function clearVisualZone()
-    VisualFolder:ClearAllChildren()
-end
-
-local function updateVisualZone()
-    clearVisualZone()
-    if not (Config.Enabled and Config.ShowVisualZone and root) then return end
-
-    local r = Config.Distance
-    local angle = Config.Angle
-
-    if angle == 360 then
-        local circle = Instance.new("Part")
-        circle.Name = "Zone_360"
-        circle.Shape = Enum.PartType.Cylinder
-        circle.Size = Vector3.new(0.05, r * 2, r * 2)
-        circle.Color = Color3.fromRGB(255, 30, 30)
-        circle.Material = Enum.Material.Neon
-        circle.Transparency = 0.72
-        circle.CanCollide = false
-        circle.CanQuery = false
-        circle.CanTouch = false
-        circle.CastShadow = false
-        circle.Parent = VisualFolder
-
-        local weld = Instance.new("WeldConstraint")
-        circle.CFrame = root.CFrame * CFrame.new(0, -2.85, 0) * CFrame.Angles(0, 0, math.rad(90))
-        weld.Part0 = root
-        weld.Part1 = circle
-        weld.Parent = circle
-    else
-        local segments = (angle == 180) and 14 or 8
-        local startAngle = -angle / 2
-        local step = angle / segments
-
-        for i = 0, segments - 1 do
-            local a1 = math.rad(startAngle + (i * step))
-            local a2 = math.rad(startAngle + ((i + 1) * step))
-
-            local p1 = Vector3.new(math.sin(a1) * r, 0, -math.cos(a1) * r)
-            local p2 = Vector3.new(math.sin(a2) * r, 0, -math.cos(a2) * r)
-            local center = (p1 + p2) / 2
-
-            local wedge = Instance.new("Part")
-            wedge.Name = "Zone_Sector_" .. i
-            wedge.Size = Vector3.new((p2 - p1).Magnitude, 0.05, r)
-            wedge.Color = Color3.fromRGB(255, 30, 30)
-            wedge.Material = Enum.Material.Neon
-            wedge.Transparency = 0.7
-            wedge.CanCollide = false
-            wedge.CanQuery = false
-            wedge.CanTouch = false
-            wedge.CastShadow = false
-            wedge.Parent = VisualFolder
-
-            local weld = Instance.new("WeldConstraint")
-            wedge.CFrame = root.CFrame * CFrame.new(center.X / 2, -2.85, center.Z / 2) * CFrame.Angles(0, math.atan2(center.X, -center.Z), 0)
-            weld.Part0 = root
-            weld.Part1 = wedge
-            weld.Parent = wedge
-        end
+local isSprinting = false
+local function setSprintState(enable)
+    if enable and not isSprinting then
+        isSprinting = true
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftShift, false, game)
+        if hum then hum.WalkSpeed = FarmConfig.SprintSpeed end
+    elseif not enable and isSprinting then
+        isSprinting = false
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftShift, false, game)
+        if hum then hum.WalkSpeed = 16 end
     end
 end
 
@@ -184,7 +295,7 @@ local activeCriticalChars = {}
 
 local function executeSingleParry()
     local now = tick()
-    if isParrying or (now - lastParryTime) < Config.Cooldown then return end
+    if isParrying or (now - lastParryTime) < ParryConfig.Cooldown then return end
     isParrying = true
     lastParryTime = now
 
@@ -197,14 +308,14 @@ local function executeSingleParry()
 end
 
 local function getAngleThreshold()
-    if Config.Angle == 360 then
+    if ParryConfig.Angle == 360 then
         return -1.0
-    elseif Config.Angle == 180 then
-        return 0.05
-    elseif Config.Angle == 90 then
+    elseif ParryConfig.Angle == 180 then
+        return -0.25
+    elseif ParryConfig.Angle == 90 then
         return 0.707
     end
-    return 0.05
+    return -0.25
 end
 
 local function isEnemyTargetingMe(enemyChar)
@@ -213,32 +324,63 @@ local function isEnemyTargetingMe(enemyChar)
     if not eRoot then return false end
 
     local myPos = root.Position
-    local toEnemy = (eRoot.Position - myPos)
-    local dist = toEnemy.Magnitude
+    local ePos = eRoot.Position
 
-    if dist <= Config.Distance then
+    if math.abs(myPos.Y - ePos.Y) > 6 then return false end
+
+    local horizontalDiff = Vector2.new(ePos.X - myPos.X, ePos.Z - myPos.Z)
+    local dist2D = horizontalDiff.Magnitude
+
+    if dist2D <= ParryConfig.Distance then
+        if ParryConfig.Angle == 360 then
+            return true
+        end
+
         local myForward = root.CFrame.LookVector
-        local dirToEnemy = toEnemy.Unit
-        local angleThreshold = getAngleThreshold()
+        local myForward2D = Vector2.new(myForward.X, myForward.Z).Unit
+        local dirToEnemy2D = horizontalDiff.Unit
 
-        local inAngle = (Config.Angle == 360) or (myForward:Dot(dirToEnemy) >= angleThreshold)
-        local enemyFacingMe = eRoot.CFrame.LookVector:Dot(-dirToEnemy) > 0.15
-
-        return inAngle and enemyFacingMe
+        return myForward2D:Dot(dirToEnemy2D) >= getAngleThreshold()
     end
     return false
 end
 
+local function getCriticalDelayForCharacter(enemyChar)
+    local eHum = enemyChar:FindFirstChildOfClass("Humanoid")
+    local eAnimator = eHum and eHum:FindFirstChildOfClass("Animator")
+    if eAnimator then
+        for _, track in ipairs(eAnimator:GetPlayingAnimationTracks()) do
+            local tName = string.lower(track.Name)
+            for styleKey, delayVal in pairs(CriticalStyleTimings) do
+                if tName:find(styleKey) then
+                    return delayVal
+                end
+            end
+        end
+    end
+    return ParryConfig.DefaultCriticalDelay
+end
+
 local function handleCriticalAdded(enemyChar, child)
     if child.Name == "_H_Critical" or child.Name:find("Critical") then
-        activeCriticalChars[enemyChar] = tick()
+        if activeCriticalChars[enemyChar] then return end
+        activeCriticalChars[enemyChar] = true
 
-        task.delay(Config.CriticalDelay, function()
-            activeCriticalChars[enemyChar] = nil
-            if not Config.Enabled or isParrying then return end
+        local targetDelay = getCriticalDelayForCharacter(enemyChar)
+
+        task.delay(targetDelay, function()
+            if not ParryConfig.Enabled or isParrying then 
+                task.delay(0.2, function() activeCriticalChars[enemyChar] = nil end)
+                return 
+            end
+
             if isEnemyTargetingMe(enemyChar) then
                 executeSingleParry()
             end
+
+            task.delay(0.25, function()
+                activeCriticalChars[enemyChar] = nil
+            end)
         end)
     end
 end
@@ -270,11 +412,20 @@ local function getAttackData(track)
 
     if not isNonCombat then
         if lowerName:find("critical") or lowerName:find("heavy") or lowerName:find("crit") then
+            for styleKey, timingVal in pairs(CriticalStyleTimings) do
+                if lowerName:find(styleKey) then
+                    return { Impact = timingVal }
+                end
+            end
             local dur = (track.Length > 0) and track.Length or 1.1
-            return { Impact = dur * 0.62 }
-        elseif lowerName:find("punch") or lowerName:find("kick") or lowerName:find("wave") or lowerName:find("attack") or lowerName:find("strike") or lowerName:find("slash") or lowerName:find("swing") then
+            return { Impact = dur * 0.50 }
+        elseif lowerName:find("punch") or lowerName:find("kick") or lowerName:find("wave") 
+            or lowerName:find("attack") or lowerName:find("strike") or lowerName:find("slash") 
+            or lowerName:find("swing") or lowerName:find("cut") or lowerName:find("jab") 
+            or lowerName:find("thrust") or lowerName:find("grab") or lowerName:find("slam") 
+            or lowerName:find("tackle") or lowerName:find("kendo") or lowerName:find("sword") then
             local dur = (track.Length > 0) and track.Length or 0.8
-            return { Impact = dur * 0.38 }
+            return { Impact = dur * 0.30 }
         end
     end
 
@@ -288,14 +439,20 @@ local function handleAttackTrack(enemyChar, track)
     local attackData = getAttackData(track)
     if not attackData then return end
 
+    local lowerName = string.lower(track.Name)
+    if lowerName:find("critical") or lowerName:find("heavy") or lowerName:find("crit") then
+        activeCriticalChars[enemyChar] = true
+        task.delay(0.6, function() activeCriticalChars[enemyChar] = nil end)
+    end
+
     local speed = (track.Speed > 0) and track.Speed or 1
     local currentPos = track.TimePosition
     local impactPoint = attackData.Impact
-    local triggerPoint = math.max(0, impactPoint - Config.PreImpactTime)
+    local triggerPoint = math.max(0, impactPoint - ParryConfig.PreImpactTime)
     local delayTime = math.max(0, (triggerPoint - currentPos) / speed)
 
     task.delay(delayTime, function()
-        if not Config.Enabled or isParrying or not root or not hum or hum.Health <= 0 then return end
+        if not ParryConfig.Enabled or isParrying or not root or not hum or hum.Health <= 0 then return end
         if processedTracks[track] or not track.IsPlaying then return end
 
         if isEnemyTargetingMe(enemyChar) then
@@ -309,7 +466,7 @@ local trackedAnimators = {}
 local hookedCharacters = {}
 
 local function setupCharacterHook(targetModel)
-    if targetModel == char or hookedCharacters[targetModel] then return end
+    if not targetModel or targetModel == char or hookedCharacters[targetModel] then return end
     hookedCharacters[targetModel] = true
 
     local eHum = targetModel:FindFirstChildOfClass("Humanoid")
@@ -341,6 +498,7 @@ local function scanAllCharacters()
 end
 
 scanAllCharacters()
+
 Workspace.DescendantAdded:Connect(function(descendant)
     if descendant:IsA("Humanoid") and descendant.Parent and descendant.Parent ~= char and descendant.Parent:IsA("Model") then
         setupCharacterHook(descendant.Parent)
@@ -348,7 +506,7 @@ Workspace.DescendantAdded:Connect(function(descendant)
 end)
 
 RunService.Heartbeat:Connect(function()
-    if not Config.Enabled or isParrying or not root or not hum or hum.Health <= 0 then return end
+    if not ParryConfig.Enabled or isParrying or not root or not hum or hum.Health <= 0 then return end
 
     for anim, _ in pairs(trackedAnimators) do
         local enemyChar = anim.Parent and anim.Parent.Parent
@@ -360,7 +518,7 @@ RunService.Heartbeat:Connect(function()
                         if attackData and track.Speed > 0 and track.WeightCurrent > 0.15 then
                             local timePos = track.TimePosition
                             local impactPoint = attackData.Impact
-                            if timePos >= (impactPoint - Config.PreImpactTime) and timePos <= (impactPoint + 0.10) then
+                            if timePos >= (impactPoint - ParryConfig.PreImpactTime) and timePos <= (impactPoint + 0.12) then
                                 processedTracks[track] = true
                                 executeSingleParry()
                                 break
@@ -373,25 +531,663 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-local Window = Library:CreateWindow({
-    Title = "Arai Hub | ISHIN",
-    ToggleKey = Enum.KeyCode.RightControl
-})
+-- ========================================================
+-- AUTO FARM PATHING
+-- ========================================================
+local FLOOR_2_ENTRY_POS = Vector3.new(-63.0359192, 6.59798956, 65.2709427)
+local FLOOR_1_ENTRY_POS = Vector3.new(-63.5352364, -10.201869, 70.730072)
 
-local CombatTab = Window:CreateTab("Auto Parry")
-local SettingsTab = Window:CreateTab("Settings")
+local STORE_PASS_POINT_A = Vector3.new(203.56691, -10.3989458, 81.5912323)
+local STORE_PASS_POINT_B = Vector3.new(208.39267, -10.278965, 92.7168121)
+local STORE_INNER_ENTRY_POS = Vector3.new(207.597015, -10.278965, 92.4924927)
 
-CombatTab:AddToggle("Enable Auto Parry (เปิดใช้งาน)", true, function(state)
-    Config.Enabled = state
-    updateVisualZone()
-    if not state then
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+local BLOCKED_DOOR_CFRAME = CFrame.new(173.470123, -7.33870554, 59.1591377)
+local BLOCKED_DOOR_SIZE = Vector3.new(12, 14, 4)
+local DOOR_BLOCKER_NAME = "Pedz_811_DoorBlocker"
+
+local function setDoorBlockerState(enable)
+    local existing = Workspace:FindFirstChild(DOOR_BLOCKER_NAME)
+    if existing then existing:Destroy() end
+
+    if enable then
+        local wall = Instance.new("Part")
+        wall.Name = DOOR_BLOCKER_NAME
+        wall.Size = BLOCKED_DOOR_SIZE
+        wall.CFrame = BLOCKED_DOOR_CFRAME
+        wall.Anchored = true
+        wall.CanCollide = true
+        wall.Transparency = 1
+        wall.Parent = Workspace
+    end
+end
+
+local VisualFolder = Workspace:FindFirstChild("PathVisualFolder") or Instance.new("Folder")
+VisualFolder.Name = "PathVisualFolder"
+VisualFolder.Parent = Workspace
+
+local function clearPathVisual()
+    VisualFolder:ClearAllChildren()
+end
+
+local function renderPathVisual(waypoints)
+    clearPathVisual()
+    if not FarmConfig.ShowPathVisual or not waypoints or #waypoints < 2 then return end
+
+    local attachments = {}
+    for i, wp in ipairs(waypoints) do
+        local part = Instance.new("Part")
+        part.Name = "WP_Node_" .. i
+        part.Size = Vector3.new(0.5, 0.2, 0.5)
+        part.Position = wp.Position
+        part.Anchored = true
+        part.CanCollide = false
+        part.Transparency = 0.4
+        part.Material = Enum.Material.Neon
+        part.Color = (i == #waypoints) and Color3.fromRGB(255, 60, 60) or Color3.fromRGB(0, 170, 255)
+        part.Parent = VisualFolder
+
+        local corner = Instance.new("SpecialMesh")
+        corner.MeshType = Enum.MeshType.Cylinder
+        corner.Parent = part
+
+        local att = Instance.new("Attachment")
+        att.Position = Vector3.new(0, 0.1, 0)
+        att.Parent = part
+        table.insert(attachments, att)
+    end
+
+    for i = 1, #attachments - 1 do
+        local beam = Instance.new("Beam")
+        beam.Name = "PathBeam_" .. i
+        beam.Attachment0 = attachments[i]
+        beam.Attachment1 = attachments[i + 1]
+        beam.Width0 = 0.25
+        beam.Width1 = 0.25
+        beam.FaceCamera = true
+        beam.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 170))
+        })
+        beam.Transparency = NumberSequence.new(0.3)
+        beam.LightEmission = 0.8
+        beam.Parent = VisualFolder
+    end
+end
+
+local function pressTKey(holdTime)
+    holdTime = holdTime or 0.2
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.T, false, game)
+    task.wait(holdTime)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.T, false, game)
+end
+
+local function isActionPromptVisibleOnScreen()
+    for _, gui in ipairs(pgui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Enabled then
+            for _, label in ipairs(gui:GetDescendants()) do
+                if (label:IsA("TextLabel") or label:IsA("TextButton")) and label.Visible then
+                    local txt = label.Text:upper()
+                    if txt:find("CLEAN") or txt:find("[T]") or txt:find("STANCE") or txt:find("INTERACT") then
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    return false
+end
+
+local function getAccurateFloorLevel(position)
+    local rayOrigin = position + Vector3.new(0, 4, 0)
+    local rayDirection = Vector3.new(0, -30, 0)
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {char, VisualFolder}
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+
+    local rayResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+    local groundY = rayResult and rayResult.Position.Y or position.Y
+    local FLOOR_DIVIDER_Y = -4.5
+
+    return (groundY >= FLOOR_DIVIDER_Y) and 2 or 1, groundY
+end
+
+local lastJumpTick = 0
+local function executePreciseJump()
+    local now = tick()
+    if (now - lastJumpTick) >= 0.65 and hum.FloorMaterial ~= Enum.Material.Air then
+        lastJumpTick = now
+        hum.Jump = true
+        task.defer(function()
+            task.wait(0.08)
+            hum.Jump = false
+        end)
+    end
+end
+
+local function shouldJumpObstacle(moveDirection)
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {char, VisualFolder}
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+
+    local checkDir = moveDirection and Vector3.new(moveDirection.X, 0, moveDirection.Z).Unit or root.CFrame.LookVector
+
+    local feetPos = root.Position + Vector3.new(0, -2.2, 0)
+    local kneePos = root.Position + Vector3.new(0, -0.9, 0)
+
+    local feetRay = Workspace:Raycast(feetPos, checkDir * 2.6, raycastParams)
+    local kneeRay = Workspace:Raycast(kneePos, checkDir * 2.8, raycastParams)
+
+    local hitFeet = (feetRay and feetRay.Instance and feetRay.Instance.CanCollide and feetRay.Instance.Name ~= DOOR_BLOCKER_NAME)
+    local hitKnee = (kneeRay and kneeRay.Instance and kneeRay.Instance.CanCollide and kneeRay.Instance.Name ~= DOOR_BLOCKER_NAME)
+
+    return hitFeet or hitKnee
+end
+
+local function forceWalkDirect(targetPos, reachDist, maxTimeout)
+    reachDist = reachDist or 2.2
+    maxTimeout = maxTimeout or 5
+    local startT = tick()
+    local lastPos = root.Position
+    local lastStuckT = tick()
+
+    setSprintState(true)
+
+    while FarmConfig.Enabled and hum.Health > 0 and (tick() - startT) < maxTimeout do
+        local curPos = root.Position
+        local diff = targetPos - curPos
+        local horizontal = Vector3.new(diff.X, 0, diff.Z)
+        local dist = horizontal.Magnitude
+
+        if dist <= reachDist then
+            break
+        end
+
+        hum:Move(horizontal.Unit, false)
+        local targetLook = CFrame.lookAt(curPos, curPos + horizontal)
+        root.CFrame = root.CFrame:Lerp(targetLook, 0.3)
+
+        if shouldJumpObstacle(horizontal) or (targetPos.Y - curPos.Y) > 0.8 then
+            executePreciseJump()
+        end
+
+        if (curPos - lastPos).Magnitude < 0.25 then
+            if (tick() - lastStuckT) > 0.4 then
+                executePreciseJump()
+                lastStuckT = tick()
+            end
+        else
+            lastPos = curPos
+            lastStuckT = tick()
+        end
+
+        task.wait(0.03)
+    end
+    setSprintState(false)
+    hum:Move(Vector3.zero, false)
+end
+
+local function walkLongDistance(destinationPos, targetFloor, maxTime)
+    if not root or not hum or hum.Health <= 0 then return false end
+    maxTime = maxTime or 25
+    local startTime = tick()
+
+    local path = PathfindingService:CreatePath({
+        AgentRadius = 1.7,
+        AgentHeight = 4.8,
+        AgentCanJump = true,
+        AgentCanClimb = false,
+        AgentMaxSlope = 65,
+        WaypointSpacing = 3.5
+    })
+
+    local success, _ = pcall(function()
+        path:ComputeAsync(root.Position, destinationPos)
+    end)
+
+    if not success or path.Status ~= Enum.PathStatus.Success then
+        clearPathVisual()
+        setSprintState(true)
+        hum:MoveTo(destinationPos)
+        return false
+    end
+
+    local rawWaypoints = path:GetWaypoints()
+
+    local waypoints = {}
+    for _, wp in ipairs(rawWaypoints) do
+        if FarmConfig.SelectedJobLocation == "8-Eleven (Minimart)" and wp.Position.Z < 58.5 and math.abs(wp.Position.X - 173.47) < 7 then
+            clearPathVisual()
+            return false
+        end
+        table.insert(waypoints, wp)
+    end
+
+    renderPathVisual(waypoints)
+
+    local currentWPIndex = 2
+    local lastStuckCheckPos = root.Position
+    local lastStuckTime = tick()
+    local isFinished = false
+
+    setSprintState(true)
+
+    local heartbeatConn
+    heartbeatConn = RunService.Heartbeat:Connect(function()
+        if not FarmConfig.Enabled or hum.Health <= 0 or (tick() - startTime) > maxTime or currentWPIndex > #waypoints then
+            isFinished = true
+            return
+        end
+
+        local wp = waypoints[currentWPIndex]
+        local isLast = (currentWPIndex == #waypoints)
+        local currentPos = root.Position
+        local targetVec = wp.Position - currentPos
+        local horizontalVec = Vector3.new(targetVec.X, 0, targetVec.Z)
+        local dist = horizontalVec.Magnitude
+
+        if dist > 0.1 then
+            hum:Move(horizontalVec.Unit, false)
+            local targetLookCFrame = CFrame.lookAt(currentPos, currentPos + horizontalVec)
+            root.CFrame = root.CFrame:Lerp(targetLookCFrame, 0.28)
+        end
+
+        if wp.Action == Enum.PathWaypointAction.Jump then
+            executePreciseJump()
+        end
+
+        if (wp.Position.Y - currentPos.Y) > 1.25 then
+            executePreciseJump()
+        end
+
+        if shouldJumpObstacle(horizontalVec) then
+            executePreciseJump()
+        end
+
+        if (currentPos - lastStuckCheckPos).Magnitude < 0.25 and root.AssemblyLinearVelocity.Magnitude < 1.5 then
+            if (tick() - lastStuckTime) > 0.45 then
+                executePreciseJump()
+                lastStuckTime = tick()
+            end
+        else
+            lastStuckCheckPos = currentPos
+            lastStuckTime = tick()
+        end
+
+        if not isLast then
+            if dist <= 3.0 then
+                currentWPIndex = currentWPIndex + 1
+            end
+        else
+            if dist <= 2.2 and math.abs(currentPos.Y - wp.Position.Y) <= 3.5 then
+                isFinished = true
+            end
+        end
+    end)
+
+    while not isFinished and FarmConfig.Enabled and hum.Health > 0 do
+        task.wait(0.04)
+    end
+
+    if heartbeatConn then
+        heartbeatConn:Disconnect()
+    end
+
+    setSprintState(false)
+    hum:Move(Vector3.zero, false)
+    clearPathVisual()
+    return true
+end
+
+local function autoDecideCafeMess()
+    local map = Workspace:FindFirstChild("Workspace_PackageLink")
+        and Workspace.Workspace_PackageLink:FindFirstChild("Map")
+        or Workspace:FindFirstChild("Map", true)
+
+    if not map then return end
+
+    local buildings = map:FindFirstChild("Buildings")
+    local cafe = buildings and buildings:FindFirstChild("Mofumofu")
+    local messFolder = cafe and cafe:FindFirstChild("Mess")
+
+    if not messFolder then return end
+
+    local myFloor = getAccurateFloorLevel(root.Position)
+    local sameFloorTargets = {}
+    local otherFloorTargets = {}
+
+    for _, mess in ipairs(messFolder:GetChildren()) do
+        local prompt = mess:FindFirstChildWhichIsA("ProximityPrompt", true)
+        local part = mess:IsA("BasePart") and mess 
+            or (mess:IsA("Model") and (mess.PrimaryPart or mess:FindFirstChildWhichIsA("BasePart", true)))
+
+        if part and prompt and prompt.Enabled then
+            local itemFloor = getAccurateFloorLevel(part.Position)
+            local dist = (Vector2.new(root.Position.X, root.Position.Z) - Vector2.new(part.Position.X, part.Position.Z)).Magnitude
+
+            local itemData = {
+                Target = mess,
+                Prompt = prompt,
+                Part = part,
+                Dist = dist,
+                Floor = itemFloor
+            }
+
+            if itemFloor == myFloor then
+                table.insert(sameFloorTargets, itemData)
+            else
+                table.insert(otherFloorTargets, itemData)
+            end
+        end
+    end
+
+    local targetList = #sameFloorTargets > 0 and sameFloorTargets or otherFloorTargets
+    if #targetList == 0 then return end
+
+    table.sort(targetList, function(a, b) return a.Dist < b.Dist end)
+
+    local currentTask = targetList[1]
+    local bestTarget = currentTask.Target
+    local bestPrompt = currentTask.Prompt
+    local bestPart = currentTask.Part
+    local targetFloor = currentTask.Floor
+
+    if myFloor ~= targetFloor then
+        if targetFloor == 2 and myFloor == 1 then
+            walkLongDistance(FLOOR_2_ENTRY_POS, 2, 18)
+        elseif targetFloor == 1 and myFloor == 2 then
+            walkLongDistance(FLOOR_1_ENTRY_POS, 1, 18)
+        end
+        task.wait(0.2)
+    end
+
+    walkLongDistance(bestPart.Position, targetFloor, 20)
+
+    local waitStart = tick()
+    local canPress = false
+
+    while (tick() - waitStart) < 2.5 do
+        if not FarmConfig.Enabled then break end
+
+        local dist = (Vector2.new(root.Position.X, root.Position.Z) - Vector2.new(bestPart.Position.X, bestPart.Position.Z)).Magnitude
+        local currentFloor = getAccurateFloorLevel(root.Position)
+
+        if (currentFloor == targetFloor and dist <= 2.2) or isActionPromptVisibleOnScreen() then
+            canPress = true
+            break
+        end
+
+        local stepDir = (bestPart.Position - root.Position)
+        hum:Move(Vector3.new(stepDir.X, 0, stepDir.Z).Unit, false)
+        task.wait(0.05)
+    end
+
+    hum:Move(Vector3.zero, false)
+
+    if canPress then
+        task.wait(0.1)
+        if fireproximityprompt then
+            fireproximityprompt(bestPrompt)
+        end
+        local duration = (bestPrompt.HoldDuration > 0) and (bestPrompt.HoldDuration + 0.1) or FarmConfig.HoldDelay
+        pressTKey(duration)
+        task.wait(0.4)
+    end
+end
+
+local function handle8Eleven()
+    local pkgLink = Workspace:FindFirstChild("Workspace_PackageLink")
+    if not pkgLink then return end
+
+    local store = pkgLink:FindFirstChild("811Store")
+    local rep = store and store:FindFirstChild("Replication")
+    local b811 = rep and rep:FindFirstChild("811")
+    if not b811 then return end
+
+    local storeModel = b811:FindFirstChild("Model")
+    local cleaningTargets = {}
+    local myPos = root.Position
+
+    local function evaluateTarget(item, itemType)
+        local prompt = item:FindFirstChildWhichIsA("ProximityPrompt", true)
+        local part = item:IsA("BasePart") and item 
+            or (item:IsA("Model") and (item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart", true)))
+
+        if part and prompt and prompt.Enabled then
+            if part.Position.Z >= 58.5 then
+                local dist = (Vector2.new(myPos.X, myPos.Z) - Vector2.new(part.Position.X, part.Position.Z)).Magnitude
+                table.insert(cleaningTargets, {
+                    Target = item,
+                    Prompt = prompt,
+                    Part = part,
+                    Dist = dist,
+                    Type = itemType
+                })
+            end
+        end
+    end
+
+    if storeModel then
+        for _, item in ipairs(storeModel:GetChildren()) do
+            local name = item.Name
+            if string.find(name, "^Litter") then
+                evaluateTarget(item, "Litter")
+            elseif string.find(name, "^RamenCup") then
+                evaluateTarget(item, "RamenCup")
+            end
+        end
+    end
+
+    for _, item in ipairs(b811:GetChildren()) do
+        if string.find(item.Name, "^WindowSmudge") then
+            evaluateTarget(item, "WindowSmudge")
+        end
+    end
+
+    if #cleaningTargets == 0 then return end
+
+    table.sort(cleaningTargets, function(a, b) return a.Dist < b.Dist end)
+
+    local currentTask = cleaningTargets[1]
+    local bestTarget = currentTask.Target
+    local bestPrompt = currentTask.Prompt
+    local bestPart = currentTask.Part
+    local targetPos = bestPart.Position
+
+    local distToA = (Vector2.new(myPos.X, myPos.Z) - Vector2.new(STORE_PASS_POINT_A.X, STORE_PASS_POINT_A.Z)).Magnitude
+    local distToB = (Vector2.new(myPos.X, myPos.Z) - Vector2.new(STORE_PASS_POINT_B.X, STORE_PASS_POINT_B.Z)).Magnitude
+    local targetDistToA = (Vector2.new(targetPos.X, targetPos.Z) - Vector2.new(STORE_PASS_POINT_A.X, STORE_PASS_POINT_A.Z)).Magnitude
+    local targetDistToB = (Vector2.new(targetPos.X, targetPos.Z) - Vector2.new(STORE_PASS_POINT_B.X, STORE_PASS_POINT_B.Z)).Magnitude
+
+    if (distToA < distToB and targetDistToB < targetDistToA) then
+        walkLongDistance(STORE_PASS_POINT_A, 1, 10)
+        forceWalkDirect(STORE_PASS_POINT_B, 2.0, 4)
+        task.wait(0.1)
+    elseif (distToB < distToA and targetDistToA < targetDistToB) then
+        walkLongDistance(STORE_PASS_POINT_B, 1, 10)
+        forceWalkDirect(STORE_PASS_POINT_A, 2.0, 4)
+        task.wait(0.1)
+    end
+
+    local isInsideTask = (targetPos.Z >= 95.0) or (targetPos.Y <= -11.5)
+    local curDistToInnerAnchor = (Vector2.new(root.Position.X, root.Position.Z) - Vector2.new(STORE_INNER_ENTRY_POS.X, STORE_INNER_ENTRY_POS.Z)).Magnitude
+
+    if isInsideTask and curDistToInnerAnchor > 3.0 then
+        walkLongDistance(STORE_INNER_ENTRY_POS, 1, 12)
+        task.wait(0.1)
+    end
+
+    walkLongDistance(bestPart.Position, 1, 20)
+
+    local waitStart = tick()
+    local canPress = false
+
+    while (tick() - waitStart) < 2.5 do
+        if not FarmConfig.Enabled then break end
+
+        local dist = (Vector2.new(root.Position.X, root.Position.Z) - Vector2.new(bestPart.Position.X, bestPart.Position.Z)).Magnitude
+        if dist <= 2.2 or isActionPromptVisibleOnScreen() then
+            canPress = true
+            break
+        end
+
+        local stepDir = (bestPart.Position - root.Position)
+        hum:Move(Vector3.new(stepDir.X, 0, stepDir.Z).Unit, false)
+        task.wait(0.05)
+    end
+
+    hum:Move(Vector3.zero, false)
+
+    if canPress then
+        task.wait(0.1)
+        if fireproximityprompt then
+            fireproximityprompt(bestPrompt)
+        end
+        local duration = (bestPrompt.HoldDuration > 0) and (bestPrompt.HoldDuration + 0.1) or FarmConfig.HoldDelay
+        pressTKey(duration)
+        task.wait(0.4)
+    end
+end
+
+local function handleAutoRepair()
+    local stainsFolder = Workspace:FindFirstChild("ChirinStains")
+    if not stainsFolder then return end
+
+    local stainTasks = {}
+    local myPos = root.Position
+
+    for _, stain in ipairs(stainsFolder:GetChildren()) do
+        local prompt = stain:FindFirstChildWhichIsA("ProximityPrompt", true)
+        local part = stain:IsA("BasePart") and stain 
+            or (stain:IsA("Model") and (stain.PrimaryPart or stain:FindFirstChildWhichIsA("BasePart", true)))
+
+        if part and prompt and prompt.Enabled then
+            local dist = (Vector2.new(myPos.X, myPos.Z) - Vector2.new(part.Position.X, part.Position.Z)).Magnitude
+            table.insert(stainTasks, {
+                Target = stain,
+                Prompt = prompt,
+                Part = part,
+                Dist = dist
+            })
+        end
+    end
+
+    if #stainTasks == 0 then return end
+
+    table.sort(stainTasks, function(a, b) return a.Dist < b.Dist end)
+
+    local currentTask = stainTasks[1]
+    local bestTarget = currentTask.Target
+    local bestPrompt = currentTask.Prompt
+    local bestPart = currentTask.Part
+
+    walkLongDistance(bestPart.Position, 1, 20)
+
+    local waitStart = tick()
+    local canPress = false
+
+    while (tick() - waitStart) < 2.5 do
+        if not FarmConfig.Enabled then break end
+
+        local dist = (Vector2.new(root.Position.X, root.Position.Z) - Vector2.new(bestPart.Position.X, bestPart.Position.Z)).Magnitude
+        if dist <= 2.2 or isActionPromptVisibleOnScreen() then
+            canPress = true
+            break
+        end
+
+        local stepDir = (bestPart.Position - root.Position)
+        hum:Move(Vector3.new(stepDir.X, 0, stepDir.Z).Unit, false)
+        task.wait(0.05)
+    end
+
+    hum:Move(Vector3.zero, false)
+
+    if canPress then
+        task.wait(0.1)
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.T, false, game)
+        if fireproximityprompt then
+            fireproximityprompt(bestPrompt)
+        end
+
+        local cleanStart = tick()
+        local maxCleanTime = 5.0
+
+        while FarmConfig.Enabled and bestTarget.Parent == stainsFolder and (tick() - cleanStart) < maxCleanTime do
+            if fireproximityprompt then
+                fireproximityprompt(bestPrompt)
+            end
+            task.wait(0.1)
+        end
+
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.T, false, game)
+        task.wait(0.3)
+    end
+end
+
+task.spawn(function()
+    while true do
+        if FarmConfig.Enabled then
+            if FarmConfig.SelectedJobLocation == "Cafe (ร้านกาแฟ)" then
+                pcall(autoDecideCafeMess)
+            elseif FarmConfig.SelectedJobLocation == "8-Eleven (Minimart)" then
+                pcall(handle8Eleven)
+            elseif FarmConfig.SelectedJobLocation == "Auto Repair (ร้านซ่อมรถ)" then
+                pcall(handleAutoRepair)
+            end
+        end
+        task.wait(0.5)
     end
 end)
 
-CombatTab:AddToggle("Show Range Zone (แสดงโซนสีแดงที่พื้น)", true, function(state)
-    Config.ShowVisualZone = state
-    updateVisualZone()
+local Window = Library:CreateWindow({
+    Title = "ARAI HUB | ISHIN",
+    ToggleKey = Enum.KeyCode.RightControl
+})
+
+local MainTab = Window:CreateTab("Auto Farm")
+local CombatTab = Window:CreateTab("Auto Parry")
+local SettingsTab = Window:CreateTab("Settings")
+
+MainTab:AddToggle("Enable Auto Farm (เดินฟาร์มอัตโนมัติ)", false, function(state)
+    FarmConfig.Enabled = state
+    setDoorBlockerState(state)
+
+    if not state then
+        clearPathVisual()
+        setSprintState(false)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.T, false, game)
+        if hum then 
+            hum:Move(Vector3.zero, false) 
+            hum.Jump = false
+            hum.WalkSpeed = 16
+        end
+    end
+end)
+
+MainTab:AddToggle("Show Path Line (แสดงเส้นทางเดิน)", true, function(state)
+    FarmConfig.ShowPathVisual = state
+    if not state then
+        clearPathVisual()
+    end
+end)
+
+MainTab:AddDropdown("Select Job / Place", {
+    "Cafe (ร้านกาแฟ)",
+    "8-Eleven (Minimart)",
+    "Auto Repair (ร้านซ่อมรถ)"
+}, function(choice)
+    FarmConfig.SelectedJobLocation = choice
+    if choice == "8-Eleven (Minimart)" and FarmConfig.Enabled then
+        setDoorBlockerState(true)
+    else
+        setDoorBlockerState(false)
+    end
+end)
+
+CombatTab:AddToggle("Enable Auto Parry (เปิดใช้งานแพรี่)", true, function(state)
+    ParryConfig.Enabled = state
+    if not state then
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+    end
 end)
 
 CombatTab:AddDropdown("Parry Angle (องศาการตรวจจับ)", {
@@ -400,34 +1196,25 @@ CombatTab:AddDropdown("Parry Angle (องศาการตรวจจับ)"
     "360 Degrees (รอบตัว 360°)"
 }, function(choice)
     if choice:find("360") then
-        Config.Angle = 360
+        ParryConfig.Angle = 360
     elseif choice:find("90") then
-        Config.Angle = 90
+        ParryConfig.Angle = 90
     else
-        Config.Angle = 180
+        ParryConfig.Angle = 180
     end
-    updateVisualZone()
 end)
 
-CombatTab:AddSlider("Body Distance (studs)", 3, 12, 7.5, function(val)
-    Config.Distance = val
-    updateVisualZone()
+SettingsTab:AddSlider("Sprint WalkSpeed", 16, 50, 26, function(val)
+    FarmConfig.SprintSpeed = val
+    if isSprinting and hum then
+        hum.WalkSpeed = val
+    end
 end)
 
-CombatTab:AddSlider("Critical (R) Delay (ms)", 300, 1000, 580, function(val)
-    Config.CriticalDelay = val / 1000
-end)
-
-CombatTab:AddSlider("Pre-Impact Timing (ms)", 10, 150, 50, function(val)
-    Config.PreImpactTime = val / 1000
-end)
-
-CombatTab:AddSlider("Parry Cooldown (ms)", 150, 600, 320, function(val)
-    Config.Cooldown = val / 1000
+SettingsTab:AddSlider("T Key Hold Duration (ms)", 100, 1000, 300, function(val)
+    FarmConfig.HoldDelay = val / 1000
 end)
 
 SettingsTab:AddKeybind("Toggle UI Keybind", Enum.KeyCode.RightControl, function(newKey)
     Window:SetToggleKey(newKey)
 end)
-
-task.defer(updateVisualZone)
