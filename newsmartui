@@ -449,6 +449,84 @@ function Library:MakeWindow(config)
                 end
             end
 
+            function Section:AddMultiDropdown(dropName, options, callback)
+                local selected = {}
+                for _, opt in ipairs(options) do selected[opt] = false end
+
+                local DropdownFrame = Instance.new("Frame")
+                DropdownFrame.Size = UDim2.new(1, 0, 0, 32)
+                DropdownFrame.BackgroundColor3 = Theme.ElementBg
+                DropdownFrame.ClipsDescendants = true
+                DropdownFrame.Parent = SectionFrame
+                Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 4)
+                Instance.new("UIStroke", DropdownFrame).Color = Theme.Border
+                
+                local DropBtn = Instance.new("TextButton", DropdownFrame)
+                DropBtn.Size = UDim2.new(1, 0, 0, 32)
+                DropBtn.BackgroundTransparency = 1
+                DropBtn.Text = "  " .. dropName
+                DropBtn.TextColor3 = Theme.Text
+                DropBtn.TextXAlignment = Enum.TextXAlignment.Left
+                DropBtn.Font = Enum.Font.GothamBold
+                DropBtn.TextSize = 11
+                
+                local Icon = Instance.new("TextLabel", DropBtn)
+                Icon.Size = UDim2.new(0, 20, 0, 20)
+                Icon.Position = UDim2.new(1, -25, 0.5, -10)
+                Icon.BackgroundTransparency = 1
+                Icon.Text = "▼"
+                Icon.TextColor3 = Theme.DimText
+                Icon.Font = Enum.Font.Gotham
+                Icon.TextSize = 11
+                
+                local OptionContainer = Instance.new("Frame", DropdownFrame)
+                OptionContainer.Size = UDim2.new(1, 0, 0, 0)
+                OptionContainer.Position = UDim2.new(0, 0, 0, 32)
+                OptionContainer.BackgroundTransparency = 1
+                local OptLayout = Instance.new("UIListLayout", OptionContainer)
+                
+                local opened = false
+                DropBtn.MouseButton1Click:Connect(function()
+                    opened = not opened
+                    local targetSize = opened and (OptLayout.AbsoluteContentSize.Y + 36) or 32
+                    Tween(DropdownFrame, {Size = UDim2.new(1, 0, 0, targetSize)})
+                    Icon.Text = opened and "▲" or "▼"
+                end)
+                
+                local function updateTitle()
+                    local active = {}
+                    for _, opt in ipairs(options) do
+                        if selected[opt] then table.insert(active, opt) end
+                    end
+                    if #active > 0 then
+                        DropBtn.Text = "  " .. dropName .. " : " .. table.concat(active, ", ")
+                    else
+                        DropBtn.Text = "  " .. dropName
+                    end
+                    if callback then callback(selected) end
+                end
+                
+                for _, opt in ipairs(options) do
+                    local OptBtn = Instance.new("TextButton", OptionContainer)
+                    OptBtn.Size = UDim2.new(1, -10, 0, 26)
+                    OptBtn.Position = UDim2.new(0, 5, 0, 0)
+                    OptBtn.BackgroundColor3 = Theme.SectionBg
+                    OptBtn.Text = opt
+                    OptBtn.TextColor3 = Theme.DimText
+                    OptBtn.Font = Enum.Font.GothamBold
+                    OptBtn.TextSize = 10
+                    OptBtn.AutoButtonColor = false
+                    Instance.new("UICorner", OptBtn).CornerRadius = UDim.new(0, 4)
+                    
+                    OptBtn.MouseButton1Click:Connect(function()
+                        selected[opt] = not selected[opt]
+                        -- เปลี่ยนสีตัวอักษรเป็นสีส้ม (Theme.Accent) เมื่อถูกเลือก
+                        Tween(OptBtn, {TextColor3 = selected[opt] and Theme.Accent or Theme.DimText})
+                        updateTitle()
+                    end)
+                end
+            end
+
             function Section:AddTextbox(boxName, default, callback)
                 local BoxFrame = Instance.new("Frame")
                 BoxFrame.Size = UDim2.new(1, 0, 0, 32)
